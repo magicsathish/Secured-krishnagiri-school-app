@@ -1,1 +1,12 @@
-.
+{
+  "appId": "com.digitalindia.krishnagiri",
+  "appName": "Digital India",
+  "webDir": ".",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": true
+  }
+}
