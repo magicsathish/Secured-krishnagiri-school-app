@@ -1,0 +1,4068 @@
+<!DOCTYPE html>
+<html lang="ta"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>DRM Secure Web App Container v1.2.1</title>
+  <style>
+    :root {
+      --bg-gradient: radial-gradient(circle at 50% 20%, #111827 0%, #080b14 60%, #030508 100%);
+      --surface-card: rgba(17, 24, 39, 0.92);
+      --surface-border: rgba(255, 255, 255, 0.12);
+      --accent-cyan: #06b6d4;
+      --accent-blue: #3b82f6;
+      --accent-indigo: #6366f1;
+      --accent-emerald: #10b981;
+      --accent-rose: #f43f5e;
+      --accent-amber: #f59e0b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --glow-cyan: rgba(6, 182, 212, 0.4);
+      --glow-emerald: rgba(16, 185, 129, 0.4);
+      --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: var(--font-stack);
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      touch-action: manipulation;
+    }
+
+    body {
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+      overflow-x: hidden;
+    }
+
+    .bg-grid {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-image: 
+        linear-gradient(rgba(6, 182, 212, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(6, 182, 212, 0.05) 1px, transparent 1px);
+      background-size: 32px 32px;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .ambient-glow {
+      position: fixed;
+      width: 420px;
+      height: 420px;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--glow-cyan) 0%, transparent 70%);
+      top: 15%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      filter: blur(55px);
+      opacity: 0.35;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .container {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 420px;
+      background: var(--surface-card);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1.5px solid var(--surface-border);
+      border-radius: 28px;
+      padding: 24px 20px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.95), 0 0 35px rgba(6, 182, 212, 0.15);
+      transition: all 0.3s ease;
+    }
+
+    .container.shake {
+      animation: shakeContainer 0.4s ease-in-out;
+    }
+
+    @keyframes shakeContainer {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-8px); }
+      40%, 80% { transform: translateX(8px); }
+    }
+
+    .brand-header {
+      text-align: center;
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    /* INNOCENT SHIELD BADGE (NO SUSPICIOUS LOADERS OR PROGRESS RINGS) */
+    .shield-badge {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 10px;
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(99, 102, 241, 0.25));
+      border: 1.5px solid var(--accent-cyan);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 20px var(--glow-cyan);
+    }
+
+    .shield-icon {
+      width: 34px;
+      height: 34px;
+      fill: var(--accent-cyan);
+      pointer-events: none;
+    }
+
+    .app-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      background: linear-gradient(135deg, #ffffff, #cbd5e1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 3px;
+    }
+
+    .app-subtitle-ta {
+      font-size: 0.82rem;
+      color: var(--accent-cyan);
+      letter-spacing: 0.3px;
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+
+    .status-pill-bar {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin: 10px 0 14px;
+    }
+
+    .pill {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid transparent;
+    }
+
+    .pill-secure {
+      background: rgba(16, 185, 129, 0.12);
+      color: #34d399;
+      border-color: rgba(16, 185, 129, 0.25);
+    }
+
+    .pill-timer {
+      background: rgba(6, 182, 212, 0.12);
+      color: #38bdf8;
+      border-color: rgba(6, 182, 212, 0.25);
+      font-family: var(--font-mono);
+    }
+
+    .pill-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 6px currentColor;
+    }
+
+    /* INTERACTIVE PIN / DIAL CODE DISPLAY */
+    .pin-display-card {
+      background: #090d16;
+      border: 1.5px solid var(--surface-border);
+      border-radius: 18px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      min-height: 64px;
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.6);
+      transition: all 0.2s;
+    }
+
+    .pin-display-card.focused {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 18px rgba(6, 182, 212, 0.25), inset 0 2px 8px rgba(0,0,0,0.6);
+    }
+
+    .pin-display-card.success {
+      border-color: var(--accent-emerald) !important;
+      box-shadow: 0 0 20px var(--glow-emerald) !important;
+    }
+
+    .pin-display-card.error {
+      border-color: var(--accent-rose) !important;
+      box-shadow: 0 0 20px rgba(244, 63, 94, 0.4) !important;
+    }
+
+    .pin-text-flow {
+      font-family: var(--font-mono);
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      letter-spacing: 6px;
+      padding-left: 6px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
+
+    .pin-text-flow.empty {
+      color: #475569;
+      font-size: 1.1rem;
+      letter-spacing: 2px;
+      font-weight: 500;
+    }
+
+    .pin-quick-clear-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-muted);
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .pin-quick-clear-btn:active {
+      background: rgba(239, 68, 68, 0.2);
+      color: #fca5a5;
+    }
+
+    /* TELEPHONE DIALPAD (1-9, *, 0, #) */
+    .keypad-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .key-btn {
+      height: 58px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      color: var(--text-main);
+      font-size: 1.5rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.1s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    .key-btn .sub-text {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-top: -2px;
+      letter-spacing: 1px;
+    }
+
+    .key-btn:active {
+      background: rgba(6, 182, 212, 0.35);
+      border-color: var(--accent-cyan);
+      color: #ffffff;
+      transform: scale(0.92);
+      box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
+    }
+
+    .key-btn.symbol-key {
+      font-size: 1.6rem;
+      color: var(--accent-cyan);
+    }
+
+    .bottom-bar-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .unlock-submit-action {
+      flex: 1;
+      height: 50px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+      border: none;
+      border-radius: 14px;
+      color: #ffffff;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 15px rgba(6, 182, 212, 0.35);
+    }
+
+    .unlock-submit-action:active {
+      transform: scale(0.97);
+    }
+
+    .backspace-btn {
+      width: 70px;
+      height: 50px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      color: var(--text-main);
+      font-size: 1.25rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .backspace-btn:active {
+      background: rgba(239, 68, 68, 0.2);
+      color: #fca5a5;
+    }
+
+    .alert-msg {
+      margin-top: 12px;
+      font-size: 0.84rem;
+      text-align: center;
+      min-height: 22px;
+      font-weight: 600;
+      transition: opacity 0.2s;
+    }
+
+    .alert-msg.error {
+      color: #fb7185;
+    }
+
+    .alert-msg.success {
+      color: #34d399;
+    }
+
+    .footer-note {
+      text-align: center;
+      margin-top: 16px;
+      font-size: 0.74rem;
+      color: var(--text-muted);
+      letter-spacing: 0.3px;
+    }
+
+    /* UNLOCKED VAULT STYLES */
+    #vault-view {
+      display: none;
+      width: 100%;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .vault-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--surface-border);
+    }
+
+    .vault-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .vault-logo {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, var(--accent-indigo), var(--accent-cyan));
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+    }
+
+    .vault-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .vault-badge {
+      font-size: 0.72rem;
+      color: var(--accent-emerald);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .lock-now-btn {
+      background: rgba(239, 68, 68, 0.18);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      color: #fca5a5;
+      padding: 8px 14px;
+      border-radius: 12px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .lock-now-btn:active {
+      transform: scale(0.95);
+    }
+
+    .vault-nav {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 16px;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 4px;
+      border-radius: 14px;
+      border: 1px solid var(--surface-border);
+    }
+
+    .vault-tab-btn {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 10px 4px;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .vault-tab-btn.active {
+      background: #1e293b;
+      color: var(--text-main);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+      animation: fadeIn 0.2s ease-out;
+    }
+
+    .pages-top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding: 0 4px;
+    }
+
+    .pages-top-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .add-plus-btn {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+      border: none;
+      border-radius: 50%;
+      color: white;
+      font-size: 1.4rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(6, 182, 212, 0.4);
+      transition: all 0.2s;
+    }
+
+    .add-plus-btn:active {
+      transform: scale(0.9);
+    }
+
+    .pages-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 340px;
+      overflow-y: auto;
+    }
+
+    .page-card {
+      background: #192134;
+      border: 1px solid var(--surface-border);
+      border-radius: 16px;
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .page-card:hover, .page-card:active {
+      border-color: var(--accent-cyan);
+      background: #202b44;
+      transform: translateY(-2px);
+    }
+
+    .page-info h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: var(--text-main);
+    }
+
+    .page-info p {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 250px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 32px 16px;
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 16px;
+      border: 1px dashed var(--surface-border);
+      line-height: 1.6;
+    }
+
+    .note-textarea {
+      width: 100%;
+      height: 230px;
+      background: #0d121f;
+      border: 1px solid var(--surface-border);
+      border-radius: 16px;
+      padding: 16px;
+      color: var(--text-main);
+      font-size: 0.92rem;
+      line-height: 1.6;
+      resize: none;
+      outline: none;
+    }
+
+    .note-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    /* FULLSCREEN IN-APP WEBVIEW */
+    .webview-container {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #030712;
+      z-index: 200;
+      flex-direction: column;
+    }
+
+    .webview-container.active {
+      display: flex;
+    }
+
+    .webview-topbar {
+      height: 56px;
+      background: #0f172a;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      flex-shrink: 0;
+      z-index: 210;
+      position: relative;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .back-vault-btn {
+      background: #242c44;
+      border: 1px solid var(--surface-border);
+      color: var(--text-main);
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .back-vault-btn:active {
+      background: #333e60;
+      transform: scale(0.95);
+    }
+
+    .webview-iframe {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: #0b0f19;
+    }
+
+    /* FLOATING TOAST MESSAGE */
+    .toast-popup {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(50px);
+      background: rgba(15, 23, 42, 0.95);
+      border: 1.5px solid var(--accent-cyan);
+      color: #f8fafc;
+      padding: 12px 20px;
+      border-radius: 9999px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8), 0 0 20px var(--glow-cyan);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 1000;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .toast-popup.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* POST-EXPIRATION CARDS */
+    .overlay-view {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 300;
+      padding: 24px;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(25px);
+      -webkit-backdrop-filter: blur(25px);
+    }
+
+    .overlay-view.active {
+      display: flex;
+      animation: fadeIn 0.3s ease-out forwards;
+    }
+
+    .contact-card, .hard-crash-card {
+      background: #0d121f;
+      border: 1.5px solid var(--surface-border);
+      border-radius: 26px;
+      padding: 26px 20px;
+      max-width: 440px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85);
+    }
+
+    .contact-card {
+      border-color: rgba(6, 182, 212, 0.4);
+      box-shadow: 0 0 45px rgba(6, 182, 212, 0.2);
+    }
+
+    .dev-profile-box {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 18px;
+      padding: 16px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .dev-avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #06b6d4, #6366f1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+
+    .contact-action-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .contact-btn {
+      padding: 10px 6px;
+      border-radius: 14px;
+      text-decoration: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #ffffff;
+      border: 1px solid transparent;
+      text-align: center;
+    }
+
+    .contact-whatsapp { background: rgba(37, 211, 102, 0.15); border-color: rgba(37, 211, 102, 0.3); color: #4ade80; }
+    .contact-telegram { background: rgba(56, 189, 248, 0.15); border-color: rgba(56, 189, 248, 0.3); color: #38bdf8; }
+    .contact-phone { background: rgba(59, 130, 246, 0.15); border-color: rgba(59, 130, 246, 0.3); color: #60a5fa; }
+    .contact-email { background: rgba(168, 85, 247, 0.15); border-color: rgba(168, 85, 247, 0.3); color: #c084fc; }
+
+    /* DEVELOPER ADMIN CONFIGURATION MODAL */
+    .admin-modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.88);
+      backdrop-filter: blur(14px);
+      z-index: 500;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .admin-modal-overlay.active {
+      display: flex;
+    }
+
+    .admin-dialog {
+      background: #0d1322;
+      border: 1.5px solid var(--accent-cyan);
+      border-radius: 24px;
+      width: 100%;
+      max-width: 520px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 24px;
+      box-shadow: 0 0 50px rgba(6, 182, 212, 0.35);
+    }
+
+    .admin-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .admin-header h2 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .admin-close {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.4rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #cbd5e1;
+      margin-bottom: 6px;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 11px 14px;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      color: var(--text-main);
+      font-size: 0.9rem;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .form-control:focus {
+      border-color: var(--accent-cyan);
+    }
+
+    .admin-section-divider {
+      margin: 20px 0 14px;
+      padding-top: 14px;
+      border-top: 1px dashed rgba(255, 255, 255, 0.12);
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .action-submit-btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--accent-emerald), #059669);
+      border: none;
+      border-radius: 14px;
+      color: white;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+      transition: all 0.2s;
+    }
+
+    .btn-secondary {
+      background: #1e293b;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #f8fafc;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .export-grid-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .btn-export-client {
+      padding: 14px;
+      background: linear-gradient(135deg, #059669, #0284c7);
+      border: none;
+      border-radius: 14px;
+      color: white;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(5, 150, 105, 0.4);
+    }
+
+    .btn-export-dev {
+      padding: 14px;
+      background: linear-gradient(135deg, #6366f1, #06b6d4);
+      border: none;
+      border-radius: 14px;
+      color: white;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.98); }
+      to { opacity: 1; transform: scale(1); }
+    }
+  
+    /* ADMIN STEALTH GOLD GLOW (7-SECOND STAR HOLD) */
+    @keyframes pulseGoldGlow {
+      0% {
+        border-color: #f59e0b !important;
+        box-shadow: 0 0 15px rgba(245, 158, 11, 0.7), inset 0 0 8px rgba(245, 158, 11, 0.25) !important;
+      }
+      100% {
+        border-color: #fbbf24 !important;
+        box-shadow: 0 0 30px rgba(251, 191, 36, 0.95), inset 0 0 15px rgba(251, 191, 36, 0.4) !important;
+      }
+    }
+    .pin-display-card.admin-mode-active {
+      animation: pulseGoldGlow 1.2s infinite alternate !important;
+    }
+    .admin-mode-badge {
+      display: none;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #fbbf24;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+    }
+    .pin-display-card.admin-mode-active .admin-mode-badge {
+      display: block;
+    }
+
+    /* DEVICE ACTIVATION CARD STYLES */
+    .device-activation-card {
+      display: none;
+      background: rgba(15, 23, 42, 0.92);
+      border: 1px solid rgba(59, 130, 246, 0.5);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 16px;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+    .device-activation-card.active {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+    .dev-id-badge {
+      background: #0f172a;
+      border: 1px dashed #3b82f6;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-family: monospace;
+      font-size: 1.15rem;
+      color: #60a5fa;
+      font-weight: 700;
+      letter-spacing: 2px;
+      margin: 10px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .copy-id-btn {
+      background: rgba(59, 130, 246, 0.2);
+      border: 1px solid #3b82f6;
+      color: #93c5fd;
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .quick-send-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .btn-send-wa {
+      background: #059669;
+      color: #fff;
+      text-decoration: none;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn-send-tg {
+      background: #0284c7;
+      color: #fff;
+      text-decoration: none;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .act-key-input-box {
+      width: 100%;
+      background: #1e293b;
+      border: 1px solid #475569;
+      border-radius: 8px;
+      padding: 10px;
+      color: #f8fafc;
+      font-family: monospace;
+      font-size: 0.9rem;
+      box-sizing: border-box;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    .btn-activate-device {
+      width: 100%;
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 11px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    /* MASTER KEYGEN STYLES IN ADMIN */
+    .keygen-panel-card {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      border-radius: 12px;
+      padding: 14px;
+      margin-top: 16px;
+      margin-bottom: 16px;
+    }
+    .keygen-header {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #fbbf24;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid rgba(245, 158, 11, 0.2);
+      padding-bottom: 6px;
+    }
+    .keygen-subtabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .keygen-tab-btn {
+      flex: 1;
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      padding: 6px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      cursor: pointer;
+    }
+    .keygen-tab-btn.active {
+      background: #f59e0b;
+      border-color: #f59e0b;
+      color: #0f172a;
+      font-weight: 700;
+    }
+    .keygen-result-box {
+      background: #090d16;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      color: #34d399;
+      word-break: break-all;
+      margin-top: 10px;
+      display: none;
+    }
+
+  
+    /* ADMIN MODAL 5-TAB NAVIGATION */
+    .admin-nav-tabs {
+      display: flex;
+      background: #0f172a;
+      border-bottom: 1px solid #334155;
+      padding: 6px 8px 0 8px;
+      gap: 4px;
+      overflow-x: auto;
+    }
+    .admin-tab-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      border-bottom: none;
+      color: #94a3b8;
+      padding: 8px 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border-radius: 8px 8px 0 0;
+      cursor: pointer;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .admin-tab-btn:hover {
+      color: #f8fafc;
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .admin-tab-btn.active {
+      background: #1e293b;
+      border-color: #334155 #334155 transparent #334155;
+      color: #f59e0b;
+      font-weight: 700;
+    }
+    .admin-tab-page {
+      display: none;
+      padding: 16px;
+      max-height: calc(85vh - 140px);
+      overflow-y: auto;
+    }
+    .admin-tab-page.active {
+      display: block;
+    }
+
+    /* TARGET SELECTOR & CHECKBOX LIST */
+    .target-mode-pill-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .target-mode-card {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 10px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .target-mode-card.selected {
+      border-color: #3b82f6;
+      background: rgba(59, 130, 246, 0.15);
+    }
+    .target-item-check-row {
+      display: flex;
+      align-items: center;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 8px;
+      gap: 10px;
+    }
+    .target-item-check-row input[type="checkbox"], .target-item-check-row input[type="radio"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+
+    /* CLIENT LAUNCHER HUB VIEW (Clean Menu without Vault UI) */
+    .client-hub-container {
+      display: none;
+      width: 100%;
+      max-width: 440px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .client-hub-container.active {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+    .client-hub-header {
+      margin-bottom: 20px;
+    }
+    .client-hub-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .client-hub-item-btn {
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      border-radius: 12px;
+      padding: 16px;
+      color: #f8fafc;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.2s;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+    }
+    .client-hub-item-btn:hover {
+      border-color: #60a5fa;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.25);
+    }
+
+    /* SUMMARY PREVIEW CARD IN EXPORT TAB */
+    .summary-preview-card {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 16px;
+      font-size: 0.85rem;
+    }
+    .summary-preview-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px dashed #1e293b;
+    }
+    .summary-preview-row:last-child {
+      border-bottom: none;
+    }
+    .summary-label {
+      color: #94a3b8;
+    }
+    .summary-val {
+      color: #f8fafc;
+      font-weight: 600;
+    }
+
+  
+    /* V1.1.4 QUICK DURATION BUTTONS GRID */
+    .duration-quick-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: 6px;
+      margin-top: 8px;
+      margin-bottom: 12px;
+    }
+    .duration-pill-btn {
+      background: #1e293b;
+      border: 1px solid #475569;
+      color: #94a3b8;
+      border-radius: 6px;
+      padding: 6px 4px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .duration-pill-btn:hover {
+      background: #334155;
+      color: #f8fafc;
+      border-color: #3b82f6;
+    }
+    .duration-pill-btn.active {
+      background: #3b82f6;
+      color: #fff;
+      border-color: #3b82f6;
+      font-weight: 700;
+    }
+
+    /* VAULT MANAGER IN ADMIN */
+    .admin-vault-section {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 14px;
+    }
+    .admin-vault-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #1e293b;
+    }
+    .admin-vault-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .vault-item-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 8px 10px;
+      margin-bottom: 6px;
+      gap: 8px;
+    }
+    .vault-item-info {
+      flex: 1;
+      min-width: 0;
+      text-align: left;
+    }
+    .vault-item-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #f8fafc;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .vault-item-meta {
+      font-size: 0.7rem;
+      color: #94a3b8;
+    }
+    .vault-item-actions {
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .btn-vault-mini {
+      background: #334155;
+      border: 1px solid #475569;
+      color: #cbd5e1;
+      border-radius: 4px;
+      padding: 3px 6px;
+      font-size: 0.7rem;
+      cursor: pointer;
+    }
+    .btn-vault-mini:hover {
+      background: #475569;
+      color: #fff;
+    }
+    .btn-vault-mini.delete {
+      color: #f87171;
+      border-color: rgba(239, 68, 68, 0.4);
+    }
+    .btn-vault-mini.edit {
+      color: #60a5fa;
+      border-color: rgba(59, 130, 246, 0.4);
+    }
+
+  
+    /* V1.1.4 IMMERSIVE 100% FULLSCREEN WEBVIEW (ZERO TOP BAR) */
+    .inapp-webview-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: #000;
+      z-index: 9999;
+      flex-direction: column;
+      margin: 0; padding: 0;
+      overflow: hidden;
+    }
+    .inapp-webview-overlay.active {
+      display: flex;
+    }
+    .protected-iframe {
+      width: 100vw;
+      height: 100vh;
+      border: none;
+      display: block;
+      margin: 0; padding: 0;
+      background: #fff;
+    }
+
+    /* V1.1.4 EXPORT FALLBACK ACTIONS */
+    .export-fallback-panel {
+      display: none;
+      background: #090d16;
+      border: 1px solid #10b981;
+      border-radius: 10px;
+      padding: 12px;
+      margin-top: 12px;
+      text-align: center;
+    }
+    .export-fallback-panel.active {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+    .export-fallback-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+  
+    /* V1.1.4 FLOATING CORNER BACK BUBBLE */
+    .floating-back-bubble {
+      position: fixed;
+      top: 14px;
+      left: 14px;
+      width: 44px;
+      height: 44px;
+      background: rgba(15, 23, 42, 0.82);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #f8fafc;
+      font-size: 1.25rem;
+      cursor: pointer;
+      z-index: 100000;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+      transition: all 0.2s ease;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .floating-back-bubble:hover {
+      background: rgba(30, 41, 59, 0.95);
+      border-color: #3b82f6;
+      transform: scale(1.08);
+    }
+    .floating-back-bubble:active {
+      transform: scale(0.92);
+    }
+
+    /* DIRECT DOWNLOAD READY CARD IN TAB 5 */
+    .download-ready-card {
+      display: none;
+      background: #0f172a;
+      border: 1px solid #10b981;
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 14px;
+      text-align: center;
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.2);
+    }
+    .download-ready-card.active {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+
+  
+    /* V1.1.4 TACTILE BUTTON ACTIVE FEEDBACK */
+    button:active, 
+    .action-submit-btn:active, 
+    .btn-activate-device:active, 
+    .duration-pill-btn:active, 
+    .copy-id-btn:active, 
+    .btn-secondary:active, 
+    .client-hub-item-btn:active,
+    .key-btn:active {
+      transform: scale(0.94) !important;
+      filter: brightness(1.3) !important;
+      box-shadow: 0 0 16px rgba(59, 130, 246, 0.7) !important;
+      transition: transform 0.06s ease, filter 0.06s ease !important;
+    }
+
+    
+    /* V1.2.1 ULTRA-SLIM MICRO-HEADER & POPUP NAVIGATION */
+    
+    
+    .webview-slim-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    
+    .nav-popup-card {
+      width: 90%;
+      max-width: 380px;
+      background: rgba(17, 24, 39, 0.98);
+      border: 1.5px solid rgba(56, 189, 248, 0.35);
+      border-radius: 24px;
+      padding: 24px 20px;
+      text-align: center;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9), 0 0 35px rgba(6, 182, 212, 0.2);
+      backdrop-filter: blur(20px);
+      animation: modalScaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .btn-popup-action {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: 14px;
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    .btn-popup-action:active {
+      transform: scale(0.96);
+      filter: brightness(1.15);
+    }
+
+    /* Floating back pill completely removed in v1.2.1 */
+    @keyframes pulseBorder {
+      0% { border-color: rgba(59, 130, 246, 0.4); }
+      100% { border-color: rgba(96, 165, 250, 0.9); box-shadow: 0 0 14px rgba(59, 130, 246, 0.5); }
+    }
+
+    /* EXPORT PROGRESS STEP MODAL */
+    .export-progress-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.92);
+      backdrop-filter: blur(16px);
+      z-index: 1000000;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .export-progress-overlay.active {
+      display: flex;
+      animation: fadeIn 0.25s ease;
+    }
+    .export-progress-card {
+      background: #0f172a;
+      border: 1px solid rgba(59, 130, 246, 0.5);
+      border-radius: 18px;
+      padding: 24px;
+      width: 95%;
+      max-width: 440px;
+      text-align: center;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+    }
+    .progress-bar-track {
+      width: 100%;
+      height: 12px;
+      background: #1e293b;
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 16px 0 10px 0;
+      border: 1px solid #334155;
+    }
+    .progress-bar-fill {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6, #10b981);
+      border-radius: 10px;
+      transition: width 0.3s ease;
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.7);
+    }
+    .progress-percentage {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: #34d399;
+      font-family: monospace;
+    }
+    .step-log-box {
+      background: #090d16;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 12px;
+      text-align: left;
+      font-size: 0.78rem;
+      color: #94a3b8;
+      max-height: 140px;
+      overflow-y: auto;
+      margin-top: 12px;
+      line-height: 1.6;
+    }
+    .step-log-item.active {
+      color: #60a5fa;
+      font-weight: 600;
+    }
+    .step-log-item.done {
+      color: #34d399;
+    }
+
+    /* EXIT CONFIRMATION MODAL */
+    .exit-modal-card {
+      background: #0f172a;
+      border: 1px solid #ef4444;
+      border-radius: 16px;
+      padding: 20px;
+      width: 90%;
+      max-width: 360px;
+      text-align: center;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.8);
+    }
+
+  </style>
+<!-- V1.2.1.2 Fixed by ChatGPT: protected page runtime / download boundary -->
+</head>
+<body>
+
+  <div class="bg-grid"></div>
+  <div class="ambient-glow"></div>
+
+  
+  <!-- V1.1.4 ANIMATED EXPORT PROGRESS & STEP MODAL -->
+  <div class="export-progress-overlay" id="export-progress-modal">
+    <div class="export-progress-card">
+      <div style="font-size: 2.2rem; margin-bottom: 6px;">📦</div>
+      <h3 style="font-size: 1.15rem; color: #f8fafc; margin-bottom: 4px;" id="export-modal-title">கோப்பு தொகுக்கப்படுகிறது...</h3>
+      <div style="font-size: 0.78rem; color: #94a3b8;" id="export-modal-subtitle">பாதுகாப்புக் குறியீடுகள் தொகுக்கப்படுகின்றன</div>
+
+      <!-- Percentage Display -->
+      <div class="progress-bar-track">
+        <div class="progress-bar-fill" id="export-progress-bar-fill"></div>
+      </div>
+      <div class="progress-percentage" id="export-progress-percent">0%</div>
+
+      <!-- Live Step-by-Step Log -->
+      <div class="step-log-box" id="export-step-log">
+        <!-- Dynamically populated with step checklists -->
+      </div>
+
+      <!-- Finished Actions (Visible at 100%) -->
+      <div id="export-finished-actions" style="display:none; margin-top: 16px;">
+        <a id="btn-modal-direct-download" class="btn-activate-device" style="text-decoration:none; margin-bottom:8px; background:linear-gradient(135deg, #10b981, #059669); color:#fff; display:flex; align-items:center; justify-content:center; gap:8px;" download="">
+          <span>📥</span> உங்கள் கோப்பைப் பதிவிறக்குக (Download)
+        </a>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <button type="button" class="copy-id-btn" style="padding:10px; background:#0284c7; border-color:#0284c7; color:#fff;" onclick="copyExportedCodeToClipboard()">
+            📋 Code-ஐ காப்பி செய்
+          </button>
+          <button type="button" class="btn-secondary" style="padding:10px;" onclick="closeExportProgressModal()">
+            ✕ மூடு (Close)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- V1.1.4 EXPLICIT EXIT CONFIRMATION MODAL -->
+  <div class="admin-modal-overlay" id="exit-confirm-modal" style="z-index: 999999;">
+    <div class="exit-modal-card">
+      <div style="font-size: 2.2rem; margin-bottom: 6px;">🔒</div>
+      <h3 style="font-size: 1.15rem; color: #f8fafc; margin-bottom: 6px;">செயலியிலிருந்து வெளியேறவா?</h3>
+      <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 16px;">
+        ஆப்பை மூடி பூட்ட விரும்புகிறீர்களா? (Do you want to lock and exit the application?)
+      </p>
+      <div style="display:flex; gap:10px;">
+        <button type="button" class="btn-secondary" style="flex:1; padding:10px;" onclick="closeExitConfirmModal()">
+          ✕ ரத்து (Cancel)
+        </button>
+        <button type="button" class="btn-activate-device" style="flex:1; padding:10px; background: linear-gradient(135deg, #ef4444, #dc2626);" onclick="confirmExitAppNow()">
+          🔒 வெளியேறு (Exit)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLOATING TOAST NOTIFICATION -->
+  <div class="toast-popup" id="toast-popup"></div>
+
+  <!-- MAIN GATEKEEPER VIEW -->
+  <main class="container" id="login-container">
+    <div class="brand-header">
+      
+      <!-- INNOCENT SHIELD BADGE (NO SUSPICIOUS LOADER) -->
+      <div class="shield-badge" id="shield-logo">
+        <svg class="shield-icon" viewBox="0 0 24 24">
+          <path d="M12 1L3 5V11C3 16.55 6.84 21.74 12 23C17.16 21.74 21 16.55 21 11V5L12 1ZM12 7C13.4 7 14.8 8.1 14.8 9.5V11H16V16H8V11H9.2V9.5C9.2 8.1 10.6 7 12 7ZM12 8.2C11.3 8.2 10.7 8.8 10.7 9.5V11H13.3V9.5C13.3 8.8 12.7 8.2 12 8.2Z"></path>
+        </svg>
+      </div>
+
+      <h1 class="app-title" id="display-app-title">DRM Secure Container</h1>
+      <div class="app-subtitle-ta">டிஜிட்டல் உரிமப் பாதுகாப்பு &amp; காலக்கெடு பூட்டு</div>
+      <div style="font-size: 0.76rem; color: #38bdf8; font-family: var(--font-mono); margin-top: 4px; font-weight: 700; letter-spacing: 0.5px;">🚀 பதிப்பு / Version: v1.2.1.2 (Universal GitHub Pages &amp; Offline Decryption Edition)</div>
+    </div>
+
+    <!-- DRM Status Indicators -->
+    <div class="status-pill-bar">
+      <div class="pill pill-secure" id="license-status-pill">
+        <span class="pill-dot"></span>
+        <span id="license-status-text">License Active</span>
+      </div>
+      <div class="pill pill-timer" id="timer-pill">
+        ⏳ <span id="countdown-text">Active (90d)</span>
+      </div>
+    </div>
+
+    
+    <!-- HARDWARE DEVICE ACTIVATION CARD (Shown in Device-Locked Mode if not activated) -->
+    <div class="device-activation-card" id="device-activation-card">
+      <div style="font-size: 1.8rem; margin-bottom: 4px;">🔒</div>
+      <div style="font-size: 1rem; font-weight: 700; color: #f8fafc;">சாதனம் செயல்படுத்தப்பட வேண்டும்</div>
+      <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 2px;">(Device Activation Required)</div>
+      
+      <div class="dev-id-badge">
+        <span id="display-device-id">REQ-CALCULATING...</span>
+        <button class="copy-id-btn" type="button" onclick="copyDeviceIdToClipboard()">Copy ID</button>
+      </div>
+
+      <div class="quick-send-grid">
+        <a class="btn-send-wa" id="btn-send-wa-id" href="#" target="_blank">
+          <span>📲</span> WhatsApp-ல் அனுப்ப
+        </a>
+        <a class="btn-send-tg" id="btn-send-tg-id" href="#" target="_blank">
+          <span>✈️</span> Telegram-ல் அனுப்ப
+        </a>
+      </div>
+
+      <div style="text-align: left; font-size: 0.78rem; color: #94a3b8; margin-bottom: 4px;">ஆக்டிவேஷன் கீ (Enter Key):</div>
+      <input type="text" class="act-key-input-box" id="input-activation-key" placeholder="ACT-XXXX-XXXX-XXXX">
+      <button class="btn-activate-device" type="button" onclick="handleActivateDeviceClick()">
+        <span>⚡</span> உரிமத்தைச் செயல்படுத்து (Activate)
+      </button>
+      <div id="activation-alert" class="alert-msg" style="margin-top: 8px;"></div>
+    </div>
+
+    <!-- PIN DISPLAY CARD (Supports Numeric + * and # Dial Codes) -->
+    <div class="pin-display-card focused" id="pin-display-card">
+      <div class="admin-mode-badge" id="admin-mode-badge">🔐 ADMIN AUTHENTICATION MODE</div>
+      <div class="pin-text-flow empty" id="pin-text-flow">ENTER CODE...</div>
+      <button class="pin-quick-clear-btn" type="button" onclick="handleClearKeypad()">Clear</button>
+    </div>
+
+    <!-- TELEPHONE DIALPAD (1-9, *, 0, #) -->
+    <div class="keypad-grid">
+      <button class="key-btn" type="button" onclick="handleKeypad('1')">1<span class="sub-text"></span></button>
+      <button class="key-btn" type="button" onclick="handleKeypad('2')">2<span class="sub-text">ABC</span></button>
+      <button class="key-btn" type="button" onclick="handleKeypad('3')">3<span class="sub-text">DEF</span></button>
+      <button class="key-btn" type="button" onclick="handleKeypad('4')">4<span class="sub-text">GHI</span></button>
+      <button class="key-btn" type="button" onclick="handleKeypad('5')">5<span class="sub-text">JKL</span></button>
+      <button class="key-btn" type="button" onclick="handleKeypad('6')">6<span class="sub-text">MNO</span></button>
+      <button class="key-btn" type="button" onclick="handleKeypad('7')">7<span class="sub-text">PQRS</span></button>
+      <button class="key-btn" type="button" onclick="handleKeypad('8')">8<span class="sub-text">TUV</span></button>
+      <button class="key-btn" type="button" onclick="handleKeypad('9')">9<span class="sub-text">WXYZ</span></button>
+      <button class="key-btn symbol-key" id="key-star" type="button">*</button>
+      <button class="key-btn" type="button" onclick="handleKeypad('0')">0<span class="sub-text">+</span></button>
+      <button class="key-btn symbol-key" type="button" onclick="handleKeypad('#')">#</button>
+    </div>
+
+    <div class="bottom-bar-actions">
+      <button class="unlock-submit-action" type="button" onclick="verifyAndUnlockApp()">
+        <span>🔓</span> திறக்க (Unlock)
+      </button>
+      <button class="backspace-btn" type="button" onclick="handleBackspaceKeypad()" title="Backspace">⌫</button>
+    </div>
+
+    <div class="alert-msg" id="alert-box"></div>
+
+    <div class="footer-note">
+      Authorized System • <span id="footer-client-id">CLIENT: DRM-9081</span>
+    </div>
+  </main>
+
+  <!-- CLEAN CLIENT MENU HUB (Clean App Dashboard for End-Users) -->
+  <main class="client-hub-container" id="client-hub-view">
+    <div class="client-hub-header">
+      <div style="font-size: 2.2rem; margin-bottom: 6px;">🛡️</div>
+      <h2 id="client-hub-title" style="font-size: 1.3rem; font-weight: 700; color: #f8fafc; margin-bottom: 4px;">DRM Secure App</h2>
+      <div style="font-size: 0.78rem; color: #38bdf8;">பாதுகாக்கப்பட்ட வலை அமர்வு (Protected Secure Hub)</div>
+    </div>
+    <div class="client-hub-grid" id="client-hub-buttons-grid"></div>
+    <div style="margin-top: 24px; text-align: center;">
+      <button type="button" class="btn-secondary" style="font-size: 0.8rem; padding: 7px 16px; border-color: #334155; border-radius: 8px;" onclick="openExitConfirmModal()">
+        🔒 பயன்பாட்டை மூடுக (Exit App)
+      </button>
+    </div>
+    <div class="footer-note" style="margin-top: 20px;">
+      Created by Magic Sathish • Protected DRM Suite
+    </div>
+  </main>
+
+  <!-- FULLSCREEN IN-APP WEBVIEW (TARGET WEB APP VIEWER) -->
+  <div class="webview-container" id="inapp-webview" style="position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:99999; background:#000; display:none;">
+    <iframe id="protected-frame" style="position:absolute; top:0; left:0; width:100%; height:100%; border:none; background:#fff;" class="webview-iframe" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+  </div>
+
+  <!-- DEDICATED WEBVIEW EXIT PERMISSION CONFIRMATION MODAL -->
+  <div class="admin-modal-overlay" id="webview-exit-confirm-modal" style="z-index: 999999;">
+    <div class="exit-modal-card" style="max-width: 360px; text-align: center; border: 1.5px solid rgba(56, 189, 248, 0.4); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9);">
+      <div style="font-size: 2.4rem; margin-bottom: 8px;">⚠️</div>
+      <h3 style="font-size: 1.2rem; color: #f8fafc; font-weight: 700; margin-bottom: 6px;">இந்த பக்கத்தை விட்டு வெளியேறவா?</h3>
+      <p style="font-size: 0.84rem; color: #94a3b8; line-height: 1.5; margin-bottom: 20px;">
+        வெளியேறினால் முகப்புப் பக்கத்திற்குத் திரும்புவீர்கள்.<br>
+        <span style="font-size: 0.74rem; color: #64748b;">(Do you want to leave this page and return to menu?)</span>
+      </p>
+      <div style="display: flex; gap: 12px;">
+        <button type="button" class="btn-secondary" style="flex: 1; padding: 12px; font-weight: 700; border-radius: 10px;" onclick="cancelWebviewExit()">
+          ✕ ரத்து (Cancel)
+        </button>
+        <button type="button" class="btn-activate-device" style="flex: 1; padding: 12px; font-weight: 700; background: linear-gradient(135deg, #ef4444, #dc2626); border-radius: 10px;" onclick="confirmWebviewExit()">
+          🚪 வெளியேறு (Exit)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  
+  <!-- Floating back pill completely removed in v1.2.1 -->
+
+  
+  <!-- POST-EXPIRATION DEVELOPER CONTACT PORTAL -->
+  <div class="overlay-view" id="overlay-contact">
+    <div class="contact-card">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+        <span style="font-size: 1.8rem;">🛡️</span>
+        <div>
+          <h3 style="font-size: 1.2rem; font-weight: 700; color: var(--text-main);">Subscription Terminated</h3>
+          <div style="font-size: 0.75rem; color: var(--accent-cyan);">உரிமக் காலக்கெடு முடிவடைந்தது</div>
+        </div>
+      </div>
+
+      <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 16px;">
+        இந்தச் செயலியின் உரிமம் காலாவதியாகிவிட்டது. தொடர்ந்து பயன்படுத்த அதிகாரப்பூர்வ டெவலப்பரைத் தொடர்பு கொள்ளவும்.
+      </p>
+
+      <div class="dev-profile-box">
+        <div class="dev-avatar">👨‍💻</div>
+        <div class="dev-info">
+          <h4 id="portal-dev-name">Magic Sathish</h4>
+          <p id="portal-dev-tagline">Authorized Developer • Tamil Nadu</p>
+        </div>
+      </div>
+
+      <!-- Quick Action Buttons: WhatsApp, Telegram, Call, Email -->
+      <div class="contact-action-grid">
+        <a href="#" class="contact-btn contact-whatsapp" id="portal-btn-whatsapp" target="_blank">
+          <span style="font-size: 1.2rem;">💬</span> WhatsApp
+        </a>
+        <a href="#" class="contact-btn contact-telegram" id="portal-btn-telegram" target="_blank">
+          <span style="font-size: 1.2rem;">✈️</span> Telegram
+        </a>
+        <a href="#" class="contact-btn contact-phone" id="portal-btn-phone">
+          <span style="font-size: 1.2rem;">📞</span> Call
+        </a>
+        <a href="#" class="contact-btn contact-email" id="portal-btn-email">
+          <span style="font-size: 1.2rem;">✉️</span> Email
+        </a>
+      </div>
+
+      <!-- Quick Key input -->
+      <div class="form-group" style="margin-top: 10px;">
+        <label class="form-label" style="font-size: 0.76rem;">உரிம விசை (Renewal License Key):</label>
+        <div style="display: flex; gap: 8px;">
+          <input type="text" id="contact-quick-key" class="form-control" style="font-family: var(--font-mono); font-size: 0.8rem;" placeholder="DRM-XXXX-XXXX">
+          <button class="btn-secondary" onclick="handleApplyContactKey()" style="white-space: nowrap;">Apply</button>
+        </div>
+      </div>
+      <div class="alert-msg" id="contact-alert"></div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT LOGIC ENGINE -->
+  <script>
+    /* Pristine copy of this page taken before any UI state or decrypted data enters DOM */
+    const ORIGINAL_HTML = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+
+    /* ========================================================
+       DRM SECURE CONTAINER - CORE SECURITY LOGIC ENGINE v1.2.1.1
+       Architect: Principal Security Architect & Magic Sathish
+       Features:
+         - Visual Step-by-Step Build Progress Modal with 0-100% Counter
+         - Tactile Touch/Click Animations & Haptic Vibration on all buttons
+         - High-Visibility Floating Back Pill (Direct Return to Menu)
+         - Rock-Solid Android Hardware Back Navigation with Exit Confirmation Dialog
+         - 100% True Edge-to-Edge Fullscreen Immersion (Zero Clutter)
+         - Two-Way Reactive Expiry Synchronization (Days <-> Date/Time + Live Pill)
+         - Separate Save & Close with Unsaved Changes Guard
+         - Multi-Layer Bulletproof Export Engine
+       ======================================================== */
+
+    const DEFAULT_CONFIG = {
+  "appTitle": "DRM Secure Container",
+  "appVersion": "1.1.2",
+  "isMasterDevSuite": false,
+  "targetMode": "single",
+  "singleTargetId": "",
+  "enabledTargetIds": [],
+  "licensingMode": "device_locked",
+  "passwordDays": 91,
+  "adminPassword": "LOCKED_DISABLED",
+  "adminCode": "LOCKED_DISABLED",
+  "hasAdmin": false,
+  "cryptoSecret": "DRM_MASTER_CIPHER_SUITE_2026_SAT",
+  "expirationDate": "2026-12-31T23:59:00",
+  "devName": "Magic Sathish",
+  "devWhatsapp": "919994129179",
+  "devTelegram": "@magicsa55",
+  "devPhone": "+919994129179",
+  "devEmail": "magicsathish@gmail.com",
+  "encryptedPayload": "u8:P3A9PiokIHZ/CQJvazwhKzkscW8SCTg=",
+  "userPinSalt": "o5lz5h5tmuqlurzy",
+  "userPinHash": "75ac2569d5aa7b9f2be6934c7d1577f88e9be19ec6742fd1f492127df866efc3",
+  "adminPasswordHash": "LOCKED_DISABLED"
+};
+
+    let CONFIG = Object.assign({}, DEFAULT_CONFIG);
+    let enteredCode = "";
+    let lastBackPressTime = 0;
+    let savedPages = [];
+    let savedLinks = [];
+    let failedAttempts = 0;
+    let lockoutTimer = null;
+    let currentDeviceId = "REQ-INIT";
+    // V1.2.1.1: transient unlock session used only to open protected page runtimes.
+    // It is cleared whenever the vault is locked/closed.
+    let activeSessionPin = "";
+
+    // 7-Second Stealth Star Hold State
+    let starHoldTimer = null;
+    let starHoldStartTime = 0;
+    let isAdminAuthMode = false;
+    let adminModeAutoRevertTimer = null;
+
+    // Unsaved Changes & Export State
+    let hasUnsavedChanges = false;
+    let lastExportedHtml = "";
+    let lastExportedFilename = "";
+
+    const safeStorage = {
+      getItem: function(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+      setItem: function(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+      removeItem: function(k) { try { localStorage.removeItem(k); } catch (e) {} }
+    };
+
+    function markUnsaved() {
+      hasUnsavedChanges = true;
+    }
+
+    /* 1. INITIALIZATION */
+    window.addEventListener('DOMContentLoaded', async function() {
+      loadStoredConfig();
+      await initHardwareFingerprint();
+      initClientIdentity();
+      loadVaultData();
+      renderPagesList();
+      renderLinksList();
+      initSecretNote();
+      setupKeypadAndKeyboard();
+      initStarLongPress();
+      setupHistoryNavigation();
+      evaluateDrmStatus();
+    });
+
+    /* ULTRA-FAST OFFLINE SHA-256 IMPLEMENTATION */
+    function sha256(ascii) { return simpleSha256(ascii); }
+    function simpleSha256(ascii) {
+      function rightRotate(value, amount) {
+        return (value >>> amount) | (value << (32 - amount));
+      }
+      var mathPow = Math.pow;
+      var maxWord = mathPow(2, 32);
+      var lengthProperty = 'length';
+      var i, j;
+      var result = '';
+      var words = [];
+      var asciiBitLength = ascii[lengthProperty] * 8;
+      var hash = [];
+      var k = [];
+      var primeCounter = 0;
+
+      var isComposite = {};
+      for (var candidate = 2; primeCounter < 64; candidate++) {
+        if (!isComposite[candidate]) {
+          for (i = 0; i < 313; i += candidate) {
+            isComposite[i] = candidate;
+          }
+          hash[primeCounter] = (mathPow(candidate, .5) * maxWord) | 0;
+          k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0;
+        }
+      }
+      hash = hash.slice(0, 8);
+
+      ascii += '\x80';
+      while (ascii[lengthProperty] % 64 - 56) ascii += '\x00';
+      for (i = 0; i < ascii[lengthProperty]; i++) {
+        j = ascii.charCodeAt(i);
+        if (j >> 8) return;
+        words[i >> 2] |= j << ((3 - i) % 4) * 8;
+      }
+      words[words[lengthProperty]] = ((asciiBitLength / maxWord) | 0);
+      words[words[lengthProperty]] = (asciiBitLength | 0);
+
+      for (j = 0; j < words[lengthProperty];) {
+        var w = words.slice(j, j += 16);
+        var oldHash = hash;
+        hash = hash.slice(0, 8);
+        for (i = 0; i < 64; i++) {
+          var i2 = i + j;
+          var w15 = w[i - 15], w2 = w[i - 2];
+          var a = hash[0], e = hash[4];
+          var temp1 = hash[7]
+            + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25))
+            + ((e & hash[5]) ^ ((~e) & hash[6]))
+            + k[i]
+            + (w[i] = (i < 16) ? w[i] : (
+                w[i - 16]
+                + (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3))
+                + w[i - 7]
+                + (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))
+              ) | 0
+            );
+          var temp2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22))
+            + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
+
+          hash = [(temp1 + temp2) | 0].concat(hash);
+          hash[4] = (hash[4] + temp1) | 0;
+        }
+        for (i = 0; i < 8; i++) {
+          hash[i] = (hash[i] + oldHash[i]) | 0;
+        }
+      }
+      for (i = 0; i < 8; i++) {
+        for (j = 3; j >= 0; j--) {
+          var b = (hash[i] >> (8 * j)) & 255;
+          result += ((b < 16) ? '0' : '') + b.toString(16);
+        }
+      }
+      return result;
+    }
+
+    /* 2. HARDWARE DEVICE FINGERPRINT ENGINE */
+    async function initHardwareFingerprint() {
+      let components = [];
+      components.push(screen.width + 'x' + screen.height + 'x' + (screen.colorDepth || 24));
+      components.push(navigator.hardwareConcurrency || 4);
+      components.push(navigator.deviceMemory || 4);
+      components.push(navigator.maxTouchPoints || 1);
+      components.push(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
+
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 160;
+        canvas.height = 40;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#f59e0b';
+        ctx.fillRect(10, 5, 80, 25);
+        ctx.fillStyle = '#3b82f6';
+        ctx.font = '14px Arial';
+        ctx.fillText('DRM-LOCK-2026', 15, 22);
+        components.push(canvas.toDataURL());
+      } catch (e) {
+        components.push('canvas_err');
+      }
+
+      try {
+        const glCanvas = document.createElement('canvas');
+        const gl = glCanvas.getContext('webgl') || glCanvas.getContext('experimental-webgl');
+        if (gl) {
+          const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+          if (debugInfo) {
+            components.push(gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) || '');
+            components.push(gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || '');
+          }
+        }
+      } catch (e) {
+        components.push('gl_err');
+      }
+
+      let hwSeed = safeStorage.getItem('_drm_hw_seed');
+      if (!hwSeed) {
+        hwSeed = 'HW-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+        safeStorage.setItem('_drm_hw_seed', hwSeed);
+      }
+      components.push(hwSeed);
+
+      const raw = components.join('|||');
+      const hash = simpleSha256(raw);
+      currentDeviceId = 'REQ-' + hash.substring(0, 4).toUpperCase() + '-' + hash.substring(4, 8).toUpperCase();
+
+      const devIdElem = document.getElementById('display-device-id');
+      if (devIdElem) devIdElem.innerText = currentDeviceId;
+
+      const msg = encodeURIComponent("வணக்கம் Magic Sathish, எனது DRM ஆப் சாதனம் செயல்படுத்தக் கோரிக்கை: " + currentDeviceId);
+      const waBtn = document.getElementById('btn-send-wa-id');
+      if (waBtn) waBtn.href = "https://wa.me/" + CONFIG.devWhatsapp + "?text=" + msg;
+      const tgBtn = document.getElementById('btn-send-tg-id');
+      if (tgBtn) tgBtn.href = "https://t.me/" + CONFIG.devTelegram;
+    }
+
+    function copyDeviceIdToClipboard() {
+      navigator.clipboard.writeText(currentDeviceId).then(function() {
+        showToast("சாதனம் ஐடி நகலெடுக்கப்பட்டது!");
+      }).catch(function() {
+        showToast(currentDeviceId);
+      });
+    }
+
+    /* 3. 7-SECOND STEALTH STAR (*) HOLD FOR ADMIN ACCESS */
+    function initStarLongPress() {
+      const starBtn = document.getElementById('key-star');
+      if (!starBtn) return;
+
+      function startHold(e) {
+        if (lockoutTimer) return;
+        starHoldStartTime = Date.now();
+        starHoldTimer = setTimeout(function() {
+          activateAdminPasswordMode();
+        }, 7000);
+      }
+
+      function endHold(e) {
+        if (starHoldTimer) {
+          clearTimeout(starHoldTimer);
+          starHoldTimer = null;
+        }
+        const duration = Date.now() - starHoldStartTime;
+        if (duration < 7000 && duration > 50) {
+          if (!isAdminAuthMode) {
+            handleKeypad('*');
+          }
+        }
+      }
+
+      starBtn.addEventListener('mousedown', startHold);
+      starBtn.addEventListener('touchstart', startHold, { passive: true });
+      starBtn.addEventListener('mouseup', endHold);
+      starBtn.addEventListener('mouseleave', endHold);
+      starBtn.addEventListener('touchend', endHold);
+      starBtn.addEventListener('touchcancel', endHold);
+    }
+
+    function activateAdminPasswordMode() {
+      if (!CONFIG.hasAdmin) return;
+      isAdminAuthMode = true;
+      const card = document.getElementById('pin-display-card');
+      if (card) card.classList.add('admin-mode-active');
+
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 100]);
+      enteredCode = "";
+      renderPinDisplay();
+      showAlert("🔐 அட்மின் கடவுச்சொல் பயன்முறை (Admin Mode Active)", false);
+      showToast("அட்மின் பயன்முறை செயல்படுத்தப்பட்டது!");
+
+      if (adminModeAutoRevertTimer) clearTimeout(adminModeAutoRevertTimer);
+      adminModeAutoRevertTimer = setTimeout(function() {
+        deactivateAdminPasswordMode();
+      }, 25000);
+    }
+
+    function deactivateAdminPasswordMode() {
+      isAdminAuthMode = false;
+      if (adminModeAutoRevertTimer) {
+        clearTimeout(adminModeAutoRevertTimer);
+        adminModeAutoRevertTimer = null;
+      }
+      const card = document.getElementById('pin-display-card');
+      if (card) card.classList.remove('admin-mode-active');
+      enteredCode = "";
+      activeSessionPin = "";
+      renderPinDisplay();
+      clearAlert();
+    }
+
+    /* 4. KEYPAD & DISPLAY LOGIC */
+    function renderPinDisplay() {
+      const flow = document.getElementById('pin-text-flow');
+      if (!flow) return;
+
+      if (enteredCode.length === 0) {
+        flow.className = "pin-text-flow empty";
+        flow.innerText = isAdminAuthMode ? "ADMIN PIN..." : "ENTER CODE...";
+      } else {
+        flow.className = "pin-text-flow";
+        flow.innerText = "●".repeat(enteredCode.length);
+      }
+    }
+
+    
+    function verifyUserPin(entered) {
+      if (CONFIG.userPinHash && CONFIG.userPinSalt) {
+        return sha256(entered + CONFIG.userPinSalt) === CONFIG.userPinHash;
+      }
+      return entered === CONFIG.userPin;
+    }
+
+    function verifyAdminPassword(entered) {
+      if (CONFIG.adminPasswordHash && CONFIG.userPinSalt) {
+        return sha256(entered + CONFIG.userPinSalt) === CONFIG.adminPasswordHash;
+      }
+      return entered === CONFIG.adminPassword || entered === CONFIG.adminCode;
+    }
+
+    function handleKeypad(char) {
+      if (lockoutTimer) return;
+      if (enteredCode.length < 16) {
+        enteredCode += char;
+        renderPinDisplay();
+        if (navigator.vibrate) navigator.vibrate(20);
+
+        if (isAdminAuthMode) {
+          if (verifyAdminPassword(enteredCode)) {
+            triggerSuccessfulAdminEntry();
+            return;
+          }
+        } else {
+          if (verifyUserPin(enteredCode)) {
+            setTimeout(verifyAndUnlockApp, 100);
+          }
+        }
+      }
+    }
+
+    function handleClearKeypad() {
+      enteredCode = "";
+      renderPinDisplay();
+      clearAlert();
+      if (isAdminAuthMode) {
+        deactivateAdminPasswordMode();
+      }
+    }
+
+    function handleBackspaceKeypad() {
+      if (lockoutTimer) return;
+      if (enteredCode.length > 0) {
+        enteredCode = enteredCode.slice(0, -1);
+        renderPinDisplay();
+      }
+    }
+
+    function triggerSuccessfulAdminEntry() {
+      const card = document.getElementById('pin-display-card');
+      if (card) card.className = "pin-display-card success";
+      showAlert("அட்மின் அனுமதி வழங்கப்பட்டது!", false);
+      if (navigator.vibrate) navigator.vibrate([40, 50, 40]);
+      setTimeout(function() {
+        deactivateAdminPasswordMode();
+        openAdminModal();
+      }, 300);
+    }
+
+    /* 5. VERIFY PIN & UNLOCK DESTINATION */
+    function verifyAndUnlockApp() {
+      if (lockoutTimer) return;
+      const card = document.getElementById('pin-display-card');
+
+      if (isAdminAuthMode) {
+        if (verifyAdminPassword(enteredCode)) {
+          triggerSuccessfulAdminEntry();
+        } else {
+          if (card) card.className = "pin-display-card error admin-mode-active";
+          document.getElementById('login-container').classList.add('shake');
+          showAlert("தவறான அட்மின் கடவுச்சொல்! (Wrong Admin PIN)", true);
+          if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
+          setTimeout(function() {
+            document.getElementById('login-container').classList.remove('shake');
+            deactivateAdminPasswordMode();
+          }, 1500);
+        }
+        return;
+      }
+
+      if (!CONFIG.isMasterDevSuite && evaluateDrmStatus() === true) {
+        triggerExpirationLockout();
+        return;
+      }
+
+      if (verifyUserPin(enteredCode)) {
+        activeSessionPin = enteredCode;
+        failedAttempts = 0;
+        
+        // Critical: Ensure encrypted payload is decrypted before clearing enteredCode
+        if (savedPages.length === 0 && CONFIG.encryptedPayload) {
+          loadVaultData(enteredCode);
+        }
+
+        if (card) card.className = "pin-display-card success";
+        showAlert("அனுமதி வழங்கப்பட்டது... திறக்கிறது!", false);
+        if (navigator.vibrate) navigator.vibrate(50);
+        setTimeout(function() {
+          enteredCode = "";
+          if (card) card.className = "pin-display-card focused";
+          renderPinDisplay();
+          unlockVaultDestination();
+        }, 300);
+      } else {
+        failedAttempts++;
+        if (card) card.className = "pin-display-card error";
+        document.getElementById('login-container').classList.add('shake');
+
+        if (failedAttempts >= 5) {
+          triggerBruteForceLockout();
+        } else {
+          showAlert("தவறான குறியீடு! (Incorrect Code)", true);
+          if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
+          setTimeout(function() {
+            document.getElementById('login-container').classList.remove('shake');
+            if (card) card.className = "pin-display-card focused";
+            enteredCode = "";
+            renderPinDisplay();
+          }, 600);
+        }
+      }
+    }
+
+    function triggerBruteForceLockout() {
+      let timeLeft = 30;
+      showAlert("5 தவறான முயற்சிகள்! " + timeLeft + " வினாடிகள் முடக்கப்பட்டுள்ளது", true);
+      lockoutTimer = setInterval(function() {
+        timeLeft--;
+        if (timeLeft <= 0) {
+          clearInterval(lockoutTimer);
+          lockoutTimer = null;
+          failedAttempts = 0;
+          clearAlert();
+          enteredCode = "";
+          renderPinDisplay();
+        } else {
+          showAlert("தவறான முயற்சிகள்! " + timeLeft + " வினாடிகள் காத்திருக்கவும்", true);
+        }
+      }, 1000);
+    }
+
+    /* 6. LAUNCH DESTINATION (100% TRUE FULLSCREEN WEBVIEW) */
+    function unlockVaultDestination() {
+      // Ensure data is loaded
+      if (savedPages.length === 0 && CONFIG.encryptedPayload) {
+        loadVaultData();
+      }
+
+      document.getElementById('login-container').style.display = 'none';
+
+      // SINGLE DIRECT TARGET:
+      if (CONFIG.targetMode === 'single') {
+        let targetId = CONFIG.singleTargetId;
+        if (!targetId) {
+          if (savedPages.length > 0) targetId = savedPages[0].id;
+          else if (savedLinks.length > 0) targetId = savedLinks[0].id;
+        }
+
+        const page = savedPages.find(function(p) { return p.id === targetId; });
+        const link = savedLinks.find(function(l) { return l.id === targetId; });
+
+        if (page) {
+          openVaultHtmlPage(page.id);
+          return;
+        } else if (link) {
+          openVaultWebLink(link.id);
+          return;
+        }
+      }
+
+      // MULTI-ITEM MENU HUB:
+      if (CONFIG.targetMode === 'multi') {
+        renderClientMenuHub();
+        const hub = document.getElementById('client-hub-view');
+        if (hub) hub.classList.add('active');
+        pushNavState('client-hub');
+        return;
+      }
+
+      // Master Dev fallback
+      if (CONFIG.isMasterDevSuite) {
+        const vault = document.getElementById('vault-view');
+        if (vault) vault.style.display = 'block';
+        pushNavState('vault');
+      } else {
+        renderClientMenuHub();
+        const hub = document.getElementById('client-hub-view');
+        if (hub) hub.classList.add('active');
+        pushNavState('client-hub');
+      }
+    }
+
+    function renderClientMenuHub() {
+      const container = document.getElementById('client-hub-buttons-grid');
+      const titleElem = document.getElementById('client-hub-title');
+      if (titleElem) titleElem.innerText = CONFIG.appTitle;
+      if (!container) return;
+
+      container.innerHTML = "";
+      const enabledIds = CONFIG.enabledTargetIds || [];
+
+      let itemsToRender = [];
+      savedPages.forEach(function(p) {
+        if (enabledIds.length === 0 || enabledIds.includes(p.id)) {
+          itemsToRender.push({ type: 'page', id: p.id, title: p.title, icon: '📘' });
+        }
+      });
+      savedLinks.forEach(function(l) {
+        if (enabledIds.length === 0 || enabledIds.includes(l.id)) {
+          itemsToRender.push({ type: 'link', id: l.id, title: l.title, icon: '🌐' });
+        }
+      });
+
+      if (itemsToRender.length === 0) {
+        container.innerHTML = '<div style="color:#94a3b8; padding:20px;">உள்ளடக்கம் எதுவும் இல்லை. டெவலப்பரைத் தொடர்பு கொள்ளவும்.</div>';
+        return;
+      }
+
+      itemsToRender.forEach(function(item) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = "client-hub-item-btn";
+        btn.innerHTML = `
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span style="font-size:1.4rem;">${item.icon}</span>
+            <span style="text-align:left;">${escapeHtml(item.title)}</span>
+          </div>
+          <span style="color:#3b82f6; font-size:1.2rem;">➔</span>
+        `;
+        btn.onclick = function() {
+          if (navigator.vibrate) navigator.vibrate(25);
+          document.getElementById('client-hub-view').classList.remove('active');
+          if (item.type === 'page') openVaultHtmlPage(item.id);
+          else openVaultWebLink(item.id);
+        };
+        container.appendChild(btn);
+      });
+    }
+
+    function directCloseVault() {
+      const webview = document.getElementById('inapp-webview');
+      const frame = document.getElementById('protected-frame');
+      
+      webview.classList.remove('active');
+      frame.src = "about:blank";
+      frame.removeAttribute('srcdoc');
+
+      const hub = document.getElementById('client-hub-view');
+      if (hub) hub.classList.remove('active');
+
+      document.getElementById('vault-view').style.display = 'none';
+      document.getElementById('login-container').style.display = 'block';
+      
+      enteredCode = "";
+      renderPinDisplay();
+      clearAlert();
+      showToast("செயலி பூட்டப்பட்டது! (Locked)");
+      pushNavState('login');
+    }
+
+    
+    function updateWebviewTopBarUI(itemTitle) {
+      const titleDisplay = document.getElementById('webview-title-display');
+      if (titleDisplay) titleDisplay.textContent = itemTitle || CONFIG.appTitle || 'Digital India Student';
+    }
+
+        /* ========================================================
+       V1.2.1.2 PROTECTED PAGE RUNTIME
+       IMPORTANT: The decrypted School HTML is NEVER assigned directly to
+       the main protected iframe. The iframe itself contains an encrypted,
+       password-bound document shell. This keeps browser Save/Download of
+       the displayed document tied to a DRM/password-locked HTML package.
+       ======================================================== */
+    function fortifyHtmlContentWithArmor(rawHtml, pageTitle) {
+      if (!rawHtml) return "";
+
+      const safeDefenseScript = `
+<style>
+  body {
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+    -webkit-touch-callout: none !important;
+  }
+  input, textarea, select, button {
+    -webkit-user-select: auto !important;
+    user-select: auto !important;
+  }
+</style>
+<script>
+(function() {
+  'use strict';
+  document.addEventListener('contextmenu', function(e) { e.preventDefault(); return false; }, true);
+  document.addEventListener('keydown', function(e) {
+    if (
+      e.key === 'F12' ||
+      (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c')) ||
+      (e.ctrlKey && (e.key === 'U' || e.key === 'u' || e.key === 'S' || e.key === 's' || e.key === 'P' || e.key === 'p'))
+    ) {
+      e.preventDefault(); e.stopPropagation(); return false;
+    }
+  }, true);
+  document.addEventListener('copy', function(e) { e.preventDefault(); return false; }, true);
+  document.addEventListener('cut', function(e) { e.preventDefault(); return false; }, true);
+  document.addEventListener('dragstart', function(e) { e.preventDefault(); return false; }, true);
+})();
+<\/script>
+`;
+
+      if (rawHtml.includes('</head>')) {
+        return rawHtml.replace('</head>', safeDefenseScript + '</head>');
+      } else if (rawHtml.includes('</body>')) {
+        return rawHtml.replace('</body>', safeDefenseScript + '</body>');
+      } else {
+        return safeDefenseScript + rawHtml;
+      }
+    }
+
+    function buildProtectedPageRuntime(page, sessionPin) {
+      if (!page || !page.content || !sessionPin) return "";
+
+      // Bind this individual page to the already-authorized PIN. The PIN is
+      // never written into the generated HTML; only the encrypted payload is.
+      const protectedPayload = JSON.stringify({
+        version: "1.2.1.2",
+        title: page.title || "Protected Page",
+        html: fortifyHtmlContentWithArmor(page.content, page.title || "Protected Page")
+      });
+      const encryptedPage = legacyEncryptString(protectedPayload, CONFIG.cryptoSecret + sessionPin);
+      const secretJson = JSON.stringify(CONFIG.cryptoSecret);
+      const blobJson = JSON.stringify(encryptedPage);
+      const titleJson = JSON.stringify(page.title || "Protected Page");
+
+      return `<!DOCTYPE html>
+<html lang="ta">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>${page.title ? escapeHtml(page.title) : 'Protected Page'}</title>
+<style>
+html,body{margin:0;width:100%;height:100%;background:#fff;overflow:hidden;font-family:system-ui,sans-serif}
+#runtime{position:fixed;inset:0;background:#fff;display:flex;align-items:center;justify-content:center}
+#status{padding:18px;text-align:center;color:#334155;font-weight:700}
+#pinBox{display:none;max-width:320px;width:calc(100% - 40px);padding:20px;border-radius:16px;background:#0b1220;color:#fff;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+#pinBox input{box-sizing:border-box;width:100%;padding:12px;border-radius:10px;border:1px solid #475569;margin:10px 0;background:#111827;color:#fff;font-size:18px;text-align:center}
+#pinBox button{width:100%;padding:12px;border:0;border-radius:10px;font-weight:800;cursor:pointer}
+#contentFrame{position:fixed;inset:0;width:100%;height:100%;border:0;background:#fff;display:none}
+</style>
+</head>
+<body>
+<div id="runtime">
+  <div id="status">🔐 பாதுகாக்கப்பட்ட பக்கம் திறக்கப்படுகிறது...</div>
+  <div id="pinBox">
+    <div style="font-size:18px;margin-bottom:6px">${page.title ? escapeHtml(page.title) : 'Protected Page'}</div>
+    <div style="font-size:13px;color:#cbd5e1">Password / PIN உள்ளிடவும்</div>
+    <input id="pinInput" type="password" inputmode="numeric" autocomplete="off">
+    <button id="unlockBtn">திறக்கவும்</button>
+    <div id="error" style="min-height:20px;margin-top:8px;color:#fca5a5;font-size:13px"></div>
+  </div>
+</div>
+<iframe id="contentFrame" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+<script>
+(function(){
+'use strict';
+const SECRET=${secretJson};
+const BLOB=${blobJson};
+const TITLE=${titleJson};
+const runtime=document.getElementById('runtime');
+const status=document.getElementById('status');
+const pinBox=document.getElementById('pinBox');
+const pinInput=document.getElementById('pinInput');
+const unlockBtn=document.getElementById('unlockBtn');
+const error=document.getElementById('error');
+const contentFrame=document.getElementById('contentFrame');
+let unlocked=false;
+
+function legacyDecrypt(b64,key){
+  try{
+    const isU8=b64.indexOf('u8:')===0;
+    const str=atob(isU8?b64.substring(3):b64);
+    let out='';
+    for(let i=0;i<str.length;i++) out+=String.fromCharCode(str.charCodeAt(i) ^ (isU8?(key.charCodeAt(i%key.length)&255):key.charCodeAt(i%key.length)));
+    return isU8?decodeURIComponent(escape(out)):out;
+  }catch(e){return null;}
+}
+function showPin(){
+  if(unlocked) return;
+  status.style.display='none';
+  pinBox.style.display='block';
+  pinInput.focus();
+}
+function unlock(pin){
+  const decrypted=legacyDecrypt(BLOB,SECRET+pin);
+  if(!decrypted){error.textContent='தவறான Password / PIN'; return false;}
+  try{
+    const data=JSON.parse(decrypted);
+    if(!data.html) throw new Error('empty');
+    unlocked=true;
+    runtime.style.display='none';
+    contentFrame.style.display='block';
+    contentFrame.srcdoc=data.html;
+    return true;
+  }catch(e){error.textContent='Protected page data invalid'; return false;}
+}
+unlockBtn.addEventListener('click',function(){unlock(pinInput.value||'');});
+pinInput.addEventListener('keydown',function(e){if(e.key==='Enter') unlock(pinInput.value||'');});
+window.addEventListener('message',function(e){
+  if(e.source!==window.parent) return;
+  if(!e.data || e.data.type!=='DRM_PAGE_SESSION') return;
+  if(typeof e.data.pin==='string' && e.data.pin.length){ unlock(e.data.pin); }
+});
+setTimeout(showPin,350);
+})();
+<\/script>
+</body></html>`;
+    }
+
+    function openVaultHtmlPage(pageId) {
+      const page = savedPages.find(function(p) { return p.id === pageId; });
+      if (!page) return;
+      const vault = document.getElementById('vault-view');
+      if (vault) vault.style.display = 'none';
+      updateWebviewTopBarUI(page.title);
+      document.getElementById('login-container').style.display = 'none';
+      const hub = document.getElementById('client-hub-view');
+      if (hub) hub.classList.remove('active');
+
+      const sessionPin = activeSessionPin || CONFIG.userPin || '';
+      const frame = document.getElementById('protected-frame');
+      frame.removeAttribute('src');
+      frame.srcdoc = buildProtectedPageRuntime(page, sessionPin);
+      const wv = document.getElementById('inapp-webview'); wv.style.display = 'block'; wv.classList.add('active');
+      pushNavState('webview');
+
+      // Pass the already-authorized PIN only as an in-memory runtime message.
+      // It is not part of frame.srcdoc and therefore is not present in Save/Download source.
+      if (sessionPin) {
+        setTimeout(function(){
+          try { frame.contentWindow.postMessage({type:'DRM_PAGE_SESSION', pin:sessionPin}, '*'); } catch(e) {}
+        }, 60);
+      }
+    }
+
+    function openVaultWebLink(linkId) {
+      const link = savedLinks.find(function(l) { return l.id === linkId; });
+      if (!link) return;
+      const vault = document.getElementById('vault-view');
+      if (vault) vault.style.display = 'none';
+      updateWebviewTopBarUI(link.title);
+      document.getElementById('login-container').style.display = 'none';
+      const hub = document.getElementById('client-hub-view');
+      if (hub) hub.classList.remove('active');
+
+      const frame = document.getElementById('protected-frame');
+      frame.removeAttribute('srcdoc');
+      frame.src = link.url;
+      const wv = document.getElementById('inapp-webview'); wv.style.display = 'block'; wv.classList.add('active');
+      pushNavState('webview');
+    }
+
+    /* 7. HIGH-VISIBILITY FLOATING BACK PILL & EXIT MODAL HANDLERS */
+    function handleFloatingBackClick() {
+      if (navigator.vibrate) navigator.vibrate(30);
+      const webview = document.getElementById('inapp-webview');
+      const hub = document.getElementById('client-hub-view');
+      const frame = document.getElementById('protected-frame');
+      
+
+      if (webview && webview.classList.contains('active')) {
+        webview.classList.remove('active');
+        
+        if (frame) {
+          frame.src = "about:blank";
+          frame.removeAttribute('srcdoc');
+        }
+
+        if (CONFIG.isMasterDevSuite) {
+          const vault = document.getElementById('vault-view');
+          if (vault) vault.style.display = 'block';
+          pushNavState('vault');
+          showToast("↩️ வால்ட் திரைக்குத் திரும்பியது");
+        } else if (CONFIG.targetMode === 'multi') {
+          if (hub) {
+            renderClientMenuHub();
+            hub.classList.add('active');
+          }
+          pushNavState('client-hub');
+          showToast("↩️ முதன்மைப் பட்டியலுக்குத் திரும்பியது");
+        } else {
+          openExitConfirmModal();
+          pushNavState('webview');
+        }
+        return;
+      }
+
+      openExitConfirmModal();
+    }
+
+    function handleNavigationBackClick() {
+      handleFloatingBackClick();
+    }
+
+    function openExitConfirmModal() {
+      if (navigator.vibrate) navigator.vibrate(30);
+      const modal = document.getElementById('exit-confirm-modal');
+      if (modal) modal.classList.add('active');
+    }
+
+    function closeExitConfirmModal() {
+      const modal = document.getElementById('exit-confirm-modal');
+      if (modal) modal.classList.remove('active');
+    }
+
+    function confirmExitAppNow() {
+      closeExitConfirmModal();
+      directCloseVault();
+    }
+
+    /* 8. ROCK-SOLID ANDROID HARDWARE / GESTURE NAVIGATION */
+    
+    /* V1.1.4 ROBUST HISTORY MODEL: [guard] + [app entry]. Back always lands on guard entry first */
+    let navArmed = false;
+
+    function isGuardState(st) {
+      return !st || !st.screen || st.screen === 'guard';
+    }
+
+    function pushNavState(screenName) {
+      try {
+        if (isGuardState(window.history.state)) {
+          window.history.pushState({ screen: screenName }, '');
+        } else {
+          window.history.replaceState({ screen: screenName }, '');
+        }
+        navArmed = true;
+      } catch (e) {}
+    }
+
+    function currentScreenName() {
+      const webview = document.getElementById('inapp-webview');
+      const hub = document.getElementById('client-hub-view');
+      const vault = document.getElementById('vault-view');
+      if (webview && webview.classList.contains('active')) return 'webview';
+      if (hub && hub.classList.contains('active')) return 'client-hub';
+      if (vault && vault.style.display === 'block') return 'vault';
+      return 'login';
+    }
+
+    
+    /* V1.2.1 PURE ZERO-UI WEBVIEW & EXIT CONFIRMATION PERMISSION */
+    function openWebviewExitConfirmModal() {
+      if (navigator.vibrate) navigator.vibrate(30);
+      const modal = document.getElementById('webview-exit-confirm-modal');
+      if (modal) modal.classList.add('active');
+    }
+
+    function cancelWebviewExit() {
+      const modal = document.getElementById('webview-exit-confirm-modal');
+      if (modal) modal.classList.remove('active');
+      pushNavState('webview');
+    }
+
+    function confirmWebviewExit() {
+      const modal = document.getElementById('webview-exit-confirm-modal');
+      if (modal) modal.classList.remove('active');
+
+      const webview = document.getElementById('inapp-webview');
+      const frame = document.getElementById('protected-frame');
+      const hub = document.getElementById('client-hub-view');
+      const vault = document.getElementById('vault-view');
+
+      if (webview) {
+        webview.style.display = 'none';
+        webview.classList.remove('active');
+      }
+      if (frame) {
+        frame.src = "about:blank";
+        frame.removeAttribute('srcdoc');
+      }
+
+      if (CONFIG.isMasterDevSuite) {
+        if (vault) vault.style.display = 'block';
+        pushNavState('vault');
+        showToast("↩️ வால்ட் திரைக்குத் திரும்பியது");
+      } else if (CONFIG.targetMode === 'multi') {
+        if (hub) {
+          renderClientMenuHub();
+          hub.classList.add('active');
+        }
+        pushNavState('client-hub');
+        showToast("↩️ முதன்மைப் பட்டியலுக்குத் திரும்பியது");
+      } else {
+        openExitConfirmModal();
+        pushNavState('webview');
+      }
+    }
+
+    function openNavActionPopup() { openWebviewExitConfirmModal(); }
+    function closeNavActionPopup() { cancelWebviewExit(); }
+    function navPopupGoToMenu() { confirmWebviewExit(); }
+
+    /* V1.2.1 ROCK-SOLID ANDROID HARDWARE & GESTURE NAVIGATION */
+
+    function handleDoubleBackToExit(contextName) {
+      const now = Date.now();
+      if (now - lastBackPressTime < 2000) {
+        showToast("செயலி மூடப்படுகிறது...");
+        setTimeout(function() { 
+          window.history.go(-2); 
+        }, 200);
+      } else {
+        lastBackPressTime = now;
+        if (navigator.vibrate) navigator.vibrate(30);
+        showToast("⚠️ வெளியேற மீண்டும் ஒருமுறை அழுத்தவும் (Press back again to exit)");
+        pushNavState(contextName || 'login');
+      }
+    }
+
+    function setupHistoryNavigation() {
+      try {
+        // Immediately establish history depth on page load so back never drops out abruptly!
+        window.history.replaceState({ screen: 'initial-guard' }, '');
+        window.history.pushState({ screen: 'login' }, '');
+
+        window.addEventListener('popstate', function(event) {
+          const webview = document.getElementById('inapp-webview');
+          const hub = document.getElementById('client-hub-view');
+          const vault = document.getElementById('vault-view');
+          const admin = document.getElementById('admin-modal');
+          const navPopup = document.getElementById('nav-action-popup');
+          const exitModal = document.getElementById('exit-confirm-modal');
+          const expProgress = document.getElementById('export-progress-modal');
+
+          // 0. If modals are open, back closes them:
+          const wvExit = document.getElementById('webview-exit-confirm-modal');
+          if (wvExit && wvExit.classList.contains('active')) {
+            cancelWebviewExit();
+            return;
+          }
+          if (exitModal && exitModal.classList.contains('active')) {
+            closeExitConfirmModal();
+            pushNavState(currentScreenName());
+            return;
+          }
+          if (expProgress && expProgress.classList.contains('active')) {
+            closeExportProgressModal();
+            pushNavState(currentScreenName());
+            return;
+          }
+          if (admin && admin.classList.contains('active')) {
+            attemptCloseAdminModal();
+            pushNavState(currentScreenName());
+            return;
+          }
+
+          // 1. Inside Webview: Pressing hardware back opens the clean Navigation Popup!
+          if (webview && (webview.classList.contains('active') || webview.style.display === 'block')) {
+            openWebviewExitConfirmModal();
+            return;
+          }
+
+          // 2. On Client Menu Hub: Double back to exit!
+          if (hub && hub.classList.contains('active')) {
+            handleDoubleBackToExit('client-hub');
+            return;
+          }
+
+          // 3. On Visual Vault: Double back to exit!
+          if (vault && vault.style.display === 'block') {
+            handleDoubleBackToExit('vault');
+            return;
+          }
+
+          // 4. On Login / PIN screen: Double back to exit!
+          handleDoubleBackToExit('login');
+        });
+      } catch (e) {}
+    }
+
+    function setupKeypadAndKeyboard() {
+      window.addEventListener('keydown', function(e) {
+        if ((e.key >= '0' && e.key <= '9') || e.key === '*' || e.key === '#') {
+          handleKeypad(e.key);
+        } else if (e.key === 'Backspace') {
+          handleBackspaceKeypad();
+        } else if (e.key === 'Enter') {
+          verifyAndUnlockApp();
+        }
+      });
+    }
+
+    /* 9. TWO-WAY REAL-TIME REACTIVE EXPIRY SYNC (DAYS <-> DATE/TIME) */
+    function syncDaysToDateTime(presetDays) {
+      if (presetDays !== undefined) {
+        const daysInput = document.getElementById('cfg-password-days');
+        if (daysInput) daysInput.value = presetDays;
+      }
+
+      const daysInput = document.getElementById('cfg-password-days');
+      const days = parseInt(daysInput ? daysInput.value : '15') || 15;
+      const pill = document.getElementById('live-remaining-pill');
+      const dtInput = document.getElementById('cfg-exp-datetime');
+
+      if (days >= 36500) {
+        const str = '2099-12-31T23:59';
+        if (dtInput) dtInput.value = str;
+        CONFIG.expirationDate = str + ':00';
+        if (pill) pill.innerText = '⏳ வாழ்நாள் முழுவதும் செல்லுபடியாகும் (Lifetime Access)';
+      } else {
+        const targetDate = new Date(Date.now() + (days * 86400000));
+        const pad = function(n) { return n < 10 ? '0' + n : n; };
+        const str = targetDate.getFullYear() + '-' + pad(targetDate.getMonth()+1) + '-' + pad(targetDate.getDate()) + 'T' + pad(targetDate.getHours()) + ':' + pad(targetDate.getMinutes());
+        if (dtInput) dtInput.value = str;
+        CONFIG.expirationDate = str + ':00';
+        if (pill) pill.innerText = '⏳ ' + days + ' நாட்கள் மீதம் (' + days + 'd Remaining)';
+      }
+
+      CONFIG.passwordDays = days;
+      markUnsaved();
+    }
+
+    function syncDateTimeToDays() {
+      const dtInput = document.getElementById('cfg-exp-datetime');
+      if (!dtInput || !dtInput.value) return;
+
+      const targetDate = new Date(dtInput.value);
+      const diff = targetDate.getTime() - Date.now();
+      const pill = document.getElementById('live-remaining-pill');
+      const daysInput = document.getElementById('cfg-password-days');
+
+      if (diff <= 0) {
+        if (pill) pill.innerText = '⚠️ காலாவதியாகிவிட்டது (Expired)';
+        if (daysInput) daysInput.value = 0;
+        CONFIG.passwordDays = 0;
+      } else {
+        const totalDays = Math.ceil(diff / 86400000);
+        const hours = Math.floor((diff % 86400000) / 3600000);
+        if (daysInput) daysInput.value = totalDays;
+        if (pill) pill.innerText = '⏳ ' + totalDays + ' நாட்கள், ' + hours + ' மணிநேரம் மீதம் (' + totalDays + 'd ' + hours + 'h Remaining)';
+        CONFIG.passwordDays = totalDays;
+      }
+
+      CONFIG.expirationDate = dtInput.value + ':00';
+      markUnsaved();
+    }
+
+    function setQuickExpiration(days) {
+      syncDaysToDateTime(days);
+      showToast("எக்ஸ்பைரி அமைக்கப்பட்டது: " + (days >= 36500 ? 'வாழ்நாள் (Lifetime)' : days + ' நாட்கள்') + "!");
+    }
+
+    function toggleAdminLicenseModeUI() {
+      const mode = document.getElementById('cfg-licensing-mode').value;
+      const pwDaysGroup = document.getElementById('group-password-days');
+      if (pwDaysGroup) pwDaysGroup.style.display = mode === 'password_only' ? 'block' : 'none';
+    }
+
+    /* 10. EVALUATE DRM STATUS (MASTER DEV SUITE ALWAYS UNRESTRICTED) */
+    function evaluateDrmStatus() {
+      const pill = document.getElementById('license-status-pill');
+      const pillTxt = document.getElementById('license-status-text');
+      const timerTxt = document.getElementById('countdown-text');
+      const actCard = document.getElementById('device-activation-card');
+
+      if (CONFIG.isMasterDevSuite) {
+        if (actCard) actCard.classList.remove('active');
+        if (pill) pill.className = "pill pill-secure";
+        if (pillTxt) pillTxt.innerText = "👑 Master Dev Mode";
+        if (timerTxt) timerTxt.innerText = "Unrestricted";
+        return false;
+      }
+
+      if (CONFIG.licensingMode === 'device_locked') {
+        const isActivated = safeStorage.getItem('_drm_activated_' + currentDeviceId) === 'true';
+        if (!isActivated) {
+          if (actCard) actCard.classList.add('active');
+          if (pill) pill.className = "pill pill-danger";
+          if (pillTxt) pillTxt.innerText = "Activation Required";
+          if (timerTxt) timerTxt.innerText = "Locked";
+          return "NEEDS_ACTIVATION";
+        } else {
+          if (actCard) actCard.classList.remove('active');
+        }
+      } else {
+        if (actCard) actCard.classList.remove('active');
+        let firstLaunch = safeStorage.getItem('_drm_pw_first_launch');
+        if (!firstLaunch) {
+          firstLaunch = Date.now().toString();
+          safeStorage.setItem('_drm_pw_first_launch', firstLaunch);
+        }
+        const pwDays = parseInt(CONFIG.passwordDays) || 15;
+        const extraDays = parseInt(safeStorage.getItem('_drm_extra_days') || '0');
+        const totalMs = (pwDays + extraDays) * 86400000;
+        const expiryTs = parseInt(firstLaunch) + totalMs;
+
+        const isExpired = Date.now() >= expiryTs;
+        if (isExpired) {
+          if (pill) pill.className = "pill pill-danger";
+          if (pillTxt) pillTxt.innerText = "License Expired";
+          if (timerTxt) timerTxt.innerText = "Terminated";
+          return true;
+        } else {
+          const remDays = Math.ceil((expiryTs - Date.now()) / 86400000);
+          if (pill) pill.className = "pill pill-secure";
+          if (pillTxt) pillTxt.innerText = "Active (" + remDays + "d)";
+          if (timerTxt) timerTxt.innerText = remDays + "d Remaining";
+          return false;
+        }
+      }
+
+      const now = new Date();
+      const expDate = new Date(CONFIG.expirationDate);
+      const isExp = now >= expDate;
+
+      if (isExp) {
+        if (pill) pill.className = "pill pill-danger";
+        if (pillTxt) pillTxt.innerText = "License Expired";
+        if (timerTxt) timerTxt.innerText = "Terminated";
+      } else {
+        const days = Math.floor((expDate - now) / (1000 * 60 * 60 * 24));
+        if (pill) pill.className = "pill pill-secure";
+        if (pillTxt) pillTxt.innerText = "License Active";
+        if (timerTxt) timerTxt.innerText = days + "d Remaining";
+      }
+      return isExp;
+    }
+
+    /* 11. TAB 2: IN-ADMIN VAULT MANAGER */
+    function renderAdminVaultManager() {
+      const linksContainer = document.getElementById('admin-links-list-container');
+      const pagesContainer = document.getElementById('admin-pages-list-container');
+      const isSingle = CONFIG.targetMode === 'single';
+
+      if (linksContainer) {
+        linksContainer.innerHTML = "";
+        if (savedLinks.length === 0) {
+          linksContainer.innerHTML = '<div style="color:#94a3b8; font-size:0.78rem; padding:8px; text-align:center;">இணைப்புகள் எதுவும் இல்லை. [+ புதிய லிங்க் சேர்] பொத்தானை அழுத்தவும்.</div>';
+        } else {
+          savedLinks.forEach(function(link) {
+            const isChecked = isSingle ? 
+              (CONFIG.singleTargetId === link.id || (!CONFIG.singleTargetId && savedLinks[0].id === link.id && savedPages.length === 0)) :
+              (CONFIG.enabledTargetIds || []).includes(link.id);
+
+            const row = document.createElement('div');
+            row.className = "vault-item-row";
+            row.innerHTML = `
+              <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0;">
+                <input type="${isSingle ? 'radio' : 'checkbox'}" name="${isSingle ? 'single-target-choice' : 'multi-target-choice'}" value="${link.id}" ${isChecked ? 'checked' : ''} onchange="handleTargetItemToggle('link', '${link.id}', this.checked)">
+                <div class="vault-item-info">
+                  <div class="vault-item-title">🌐 ${escapeHtml(link.title)}</div>
+                  <div class="vault-item-meta">🔒 Secured Web Link Target</div>
+                </div>
+              </div>
+              <div class="vault-item-actions">
+                <button type="button" class="btn-vault-mini" onclick="openVaultWebLink('${link.id}')" title="Test Open">👁️ சோதி</button>
+                <button type="button" class="btn-vault-mini edit" onclick="promptEditWebLink('${link.id}')" title="Edit Link">✏️ மாற்று</button>
+                <button type="button" class="btn-vault-mini delete" onclick="deleteVaultItem('link', '${link.id}')" title="Delete">✕</button>
+              </div>
+            `;
+            linksContainer.appendChild(row);
+          });
+        }
+      }
+
+      if (pagesContainer) {
+        pagesContainer.innerHTML = "";
+        if (savedPages.length === 0) {
+          pagesContainer.innerHTML = '<div style="color:#94a3b8; font-size:0.78rem; padding:8px; text-align:center;">HTML கோப்புகள் எதுவும் இல்லை. [+ HTML அப்லோட்] பொத்தானை அழுத்தவும்.</div>';
+        } else {
+          savedPages.forEach(function(page) {
+            const isChecked = isSingle ? 
+              (CONFIG.singleTargetId === page.id || (!CONFIG.singleTargetId && savedPages[0].id === page.id)) :
+              (CONFIG.enabledTargetIds || []).includes(page.id);
+
+            const row = document.createElement('div');
+            row.className = "vault-item-row";
+            row.innerHTML = `
+              <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0;">
+                <input type="${isSingle ? 'radio' : 'checkbox'}" name="${isSingle ? 'single-target-choice' : 'multi-target-choice'}" value="${page.id}" ${isChecked ? 'checked' : ''} onchange="handleTargetItemToggle('page', '${page.id}', this.checked)">
+                <div class="vault-item-info">
+                  <div class="vault-item-title">📄 ${escapeHtml(page.title)}</div>
+                  <div class="vault-item-meta">${page.size || 'Local File'}</div>
+                </div>
+              </div>
+              <div class="vault-item-actions">
+                <button type="button" class="btn-vault-mini" onclick="openVaultHtmlPage('${page.id}')" title="Test Open">👁️ சோதி</button>
+                <button type="button" class="btn-vault-mini delete" onclick="deleteVaultItem('page', '${page.id}')" title="Delete">✕</button>
+              </div>
+            `;
+            pagesContainer.appendChild(row);
+          });
+        }
+      }
+
+      const noteElem = document.getElementById('admin-secret-note');
+      if (noteElem) {
+        noteElem.value = safeStorage.getItem('_drm_secret_note') || "";
+      }
+    }
+
+    function handleTargetItemToggle(type, id, isChecked) {
+      if (CONFIG.targetMode === 'single') {
+        CONFIG.singleTargetId = id;
+        savedPages.forEach(function(p) { p.isAutoOpen = (p.id === id); });
+        savedLinks.forEach(function(l) { l.isAutoOpen = (l.id === id); });
+        saveVaultData();
+        saveConfig();
+        showToast("முதன்மை டார்கெட்டாக அமைக்கப்பட்டது!");
+      } else {
+        if (!CONFIG.enabledTargetIds) CONFIG.enabledTargetIds = [];
+        if (isChecked) {
+          if (!CONFIG.enabledTargetIds.includes(id)) CONFIG.enabledTargetIds.push(id);
+        } else {
+          CONFIG.enabledTargetIds = CONFIG.enabledTargetIds.filter(function(i) { return i !== id; });
+        }
+        saveConfig();
+      }
+      markUnsaved();
+    }
+
+    function promptEditWebLink(linkId) {
+      const link = savedLinks.find(function(l) { return l.id === linkId; });
+      if (!link) return;
+
+      const newTitle = prompt("புதிய தலைப்பு / பொத்தான் பெயர்:", link.title);
+      if (newTitle === null) return;
+      const newUrl = prompt("புதிய ரகசிய இணையதள URL முகவரி:", link.url);
+      if (newUrl === null) return;
+
+      let cleanUrl = newUrl.trim();
+      if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+        cleanUrl = 'https://' + cleanUrl;
+      }
+
+      link.title = newTitle.trim() || link.title;
+      link.url = cleanUrl;
+
+      saveVaultData();
+      renderAdminVaultManager();
+      renderLinksList();
+      markUnsaved();
+      showToast("இணைப்பு வெற்றிகரமாக மாற்றப்பட்டது (Link Updated)!");
+    }
+
+    function handleAdminFileUpload(event) {
+      handleLocalFileUpload(event);
+      setTimeout(renderAdminVaultManager, 200);
+      markUnsaved();
+    }
+
+    function saveSecretNoteFromAdmin() {
+      const noteInput = document.getElementById('admin-secret-note');
+      if (!noteInput) return;
+      safeStorage.setItem('_drm_secret_note', noteInput.value);
+      markUnsaved();
+    }
+
+    function openVisualVaultDirectly() {
+      closeAdminModal();
+      document.getElementById('login-container').style.display = 'none';
+      const hub = document.getElementById('client-hub-view');
+      if (hub) hub.classList.remove('active');
+      document.getElementById('vault-view').style.display = 'block';
+      pushNavState('vault');
+    }
+
+    /* 12. 5-TAB ADMIN MODAL & TACTILE SAVE / CLOSE */
+    
+    /* INSTANT AUTO-REFRESH & UPLOAD ENGINE */
+    function refreshAllVaultAndMenuDisplays() {
+      try { renderPagesList(); } catch (e) {}
+      try { renderLinksList(); } catch (e) {}
+      try { renderAdminVaultManager(); } catch (e) {}
+      try { renderTargetModeUI(); } catch (e) {}
+      try { renderClientMenuHub(); } catch (e) {}
+      try { renderExportSummaryPreview(); } catch (e) {}
+    }
+
+    function processUploadedHtmlFile(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const cleanTitle = file.name.replace(/\.[^/.]+$/, "").trim() || "HTML Page";
+        const newItem = {
+          id: 'page_' + Date.now(),
+          title: cleanTitle,
+          content: e.target.result,
+          size: (file.size / 1024).toFixed(1) + " KB",
+          isAutoOpen: savedPages.length === 0 && savedLinks.length === 0
+        };
+        savedPages.push(newItem);
+        if (!CONFIG.singleTargetId) CONFIG.singleTargetId = newItem.id;
+        if (!CONFIG.enabledTargetIds) CONFIG.enabledTargetIds = [];
+        if (!CONFIG.enabledTargetIds.includes(newItem.id)) {
+          CONFIG.enabledTargetIds.push(newItem.id);
+        }
+
+        saveVaultData();
+        saveConfig();
+        refreshAllVaultAndMenuDisplays();
+        markUnsaved();
+        showToast("✅ HTML ஏற்றப்பட்டது: " + cleanTitle);
+      };
+      reader.readAsText(file);
+    }
+
+    function promptAddWebLink() {
+      promptAddWebLinkUnified();
+    }
+
+    function promptAddWebLinkFromAdmin() {
+      promptAddWebLinkUnified();
+    }
+
+    function promptAddWebLinkUnified() {
+      const title = prompt("இந்த தளத்திற்கான தலைப்பு / பொத்தான் பெயர் (e.g. எனது இணையதளம்):");
+      if (!title || !title.trim()) return;
+      const url = prompt("ரகசிய URL முகவரியை உள்ளிடவும் (e.g. https://example.com):");
+      if (!url || !url.trim()) return;
+      let cleanUrl = url.trim();
+      if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+        cleanUrl = 'https://' + cleanUrl;
+      }
+      const newItem = {
+        id: 'link_' + Date.now(),
+        title: title.trim(),
+        url: cleanUrl,
+        isAutoOpen: savedPages.length === 0 && savedLinks.length === 0
+      };
+      savedLinks.push(newItem);
+      if (!CONFIG.singleTargetId) CONFIG.singleTargetId = newItem.id;
+      if (!CONFIG.enabledTargetIds) CONFIG.enabledTargetIds = [];
+      if (!CONFIG.enabledTargetIds.includes(newItem.id)) {
+        CONFIG.enabledTargetIds.push(newItem.id);
+      }
+
+      saveVaultData();
+      saveConfig();
+      refreshAllVaultAndMenuDisplays();
+      markUnsaved();
+      showToast("✅ புதிய இணைப்பு சேர்க்கப்பட்டு உடனே புதுப்பிக்கப்பட்டது!");
+    }
+
+
+    /* DYNAMIC EXPORT FILENAME GENERATOR */
+    function generateDynamicNameCandidate() {
+      const prefixes = [
+        'SecureApp', 'ClientPortal', 'ProtectedBuild', 'SafeViewer', 
+        'WebContainer', 'AppRelease', 'DirectVault', 'SecurePackage',
+        'ClientRelease', 'OfflinePortal', 'SecureCore', 'WebArmor'
+      ];
+      const p = prefixes[Math.floor(Math.random() * prefixes.length)];
+      const now = new Date();
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const m = months[now.getMonth()];
+      const d = String(now.getDate()).padStart(2, '0');
+      const rnd = Math.floor(100 + Math.random() * 900);
+      
+      const cleanAppTitle = (CONFIG.appTitle || '')
+        .replace(/[^a-zA-Z0-9_஀-௿-]/g, '')
+        .trim();
+
+      if (cleanAppTitle && cleanAppTitle !== 'DRM_Secure_Container' && cleanAppTitle !== 'DRMSecureContainer' && Math.random() > 0.4) {
+        return cleanAppTitle + '_' + m + d + '_' + rnd;
+      }
+      return p + '_' + m + d + '_' + rnd;
+    }
+
+    function suggestDynamicExportFilename(force) {
+      const input = document.getElementById('cfg-export-filename');
+      if (!input) return;
+      if (force || !input.value.trim()) {
+        input.value = generateDynamicNameCandidate();
+      }
+    }
+
+    function getSanitizedExportFilename() {
+      const input = document.getElementById('cfg-export-filename');
+      let name = input ? input.value.trim() : '';
+      if (!name) name = generateDynamicNameCandidate();
+      name = name.replace(/\.html$/i, '').replace(/[^a-zA-Z0-9_\u0B80-\u0BFF-]/g, '_');
+      return name + '.html';
+    }
+
+function switchAdminTab(tab) {
+      if (navigator.vibrate) navigator.vibrate(15);
+      ['app', 'target', 'license', 'keygen', 'export'].forEach(function(t) {
+        const btn = document.getElementById('atab-btn-' + t);
+        const page = document.getElementById('atab-page-' + t);
+        if (btn) btn.className = (t === tab) ? 'admin-tab-btn active' : 'admin-tab-btn';
+        if (page) page.className = (t === tab) ? 'admin-tab-page active' : 'admin-tab-page';
+      });
+
+      if (tab === 'target') {
+        renderAdminVaultManager();
+      } else if (tab === 'license') {
+        syncDateTimeToDays();
+      } else if (tab === 'export') {
+        renderExportSummaryPreview();
+        suggestDynamicExportFilename(false);
+      } else if (tab === 'keygen') {
+        const reqInput = document.getElementById('kg-client-req');
+        if (reqInput && !reqInput.value) reqInput.value = currentDeviceId;
+      }
+    }
+
+    function setTargetMode(mode) {
+      if (navigator.vibrate) navigator.vibrate(20);
+      CONFIG.targetMode = mode;
+      document.getElementById('tm-card-single').className = mode === 'single' ? 'target-mode-card selected' : 'target-mode-card';
+      document.getElementById('tm-card-multi').className = mode === 'multi' ? 'target-mode-card selected' : 'target-mode-card';
+      renderAdminVaultManager();
+      markUnsaved();
+    }
+
+    function openAdminModal() {
+      const modal = document.getElementById('admin-modal');
+      if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.add('active');
+      }
+
+      try {
+        hasUnsavedChanges = false;
+        document.getElementById('cfg-app-title').value = CONFIG.appTitle;
+        document.getElementById('cfg-user-pin').value = CONFIG.userPin;
+        document.getElementById('cfg-admin-password').value = CONFIG.adminPassword || "7788";
+        document.getElementById('cfg-licensing-mode').value = CONFIG.licensingMode || "device_locked";
+        document.getElementById('cfg-password-days').value = CONFIG.passwordDays || 15;
+        toggleAdminLicenseModeUI();
+        document.getElementById('cfg-exp-datetime').value = (CONFIG.expirationDate || "2026-12-31T23:59:00").slice(0, 16);
+        document.getElementById('cfg-dev-name').value = CONFIG.devName;
+        document.getElementById('cfg-dev-whatsapp').value = CONFIG.devWhatsapp;
+        document.getElementById('cfg-dev-telegram').value = CONFIG.devTelegram || "Magicsa55";
+        document.getElementById('cfg-dev-phone').value = CONFIG.devPhone;
+        document.getElementById('cfg-dev-email').value = CONFIG.devEmail;
+
+        const kgReq = document.getElementById('kg-client-req');
+        if (kgReq && !kgReq.value) kgReq.value = currentDeviceId;
+
+        switchAdminTab('app');
+        setTargetMode(CONFIG.targetMode || 'single');
+        renderAdminVaultManager();
+        syncDateTimeToDays();
+      } catch (e) {
+        console.error("openAdminModal error:", e);
+      }
+    }
+
+    function attemptCloseAdminModal() {
+      if (hasUnsavedChanges) {
+        if (confirm("நீங்கள் செய்த மாற்றங்கள் இன்னும் சேமிக்கப்படவில்லை! சேமிக்காமல் மூட விரும்புகிறீர்களா? (Discard unsaved changes?)")) {
+          hasUnsavedChanges = false;
+          closeAdminModal();
+        }
+      } else {
+        closeAdminModal();
+      }
+    }
+
+    function closeAdminModal() {
+      const modal = document.getElementById('admin-modal');
+      if (modal) {
+        modal.classList.remove('active');
+        modal.style.display = 'none';
+      }
+      hasUnsavedChanges = false;
+    }
+
+    function saveConfigurationFromAdmin() {
+      const saveBtn = document.querySelector('.action-submit-btn');
+      if (navigator.vibrate) navigator.vibrate(35);
+      if (saveBtn) {
+        saveBtn.innerText = '⏳ சேமிக்கப்படுகிறது...';
+      }
+
+      try {
+        const titleEl = document.getElementById('cfg-app-title');
+        if (titleEl) CONFIG.appTitle = titleEl.value.trim() || "DRM Secure Container";
+        const pinEl = document.getElementById('cfg-user-pin');
+        if (pinEl) CONFIG.userPin = pinEl.value.trim() || "1234";
+        const admEl = document.getElementById('cfg-admin-password');
+        if (admEl) CONFIG.adminPassword = admEl.value.trim() || "7788";
+        const licEl = document.getElementById('cfg-licensing-mode');
+        if (licEl) CONFIG.licensingMode = licEl.value;
+        const pwdEl = document.getElementById('cfg-password-days');
+        if (pwdEl) CONFIG.passwordDays = parseInt(pwdEl.value) || 15;
+
+        const expEl = document.getElementById('cfg-exp-datetime');
+        if (expEl && expEl.value) CONFIG.expirationDate = expEl.value + ":00";
+
+        const nameEl = document.getElementById('cfg-dev-name');
+        if (nameEl) CONFIG.devName = nameEl.value.trim();
+        const waEl = document.getElementById('cfg-dev-whatsapp');
+        if (waEl) CONFIG.devWhatsapp = waEl.value.trim();
+        const tgEl = document.getElementById('cfg-dev-telegram');
+        if (tgEl) CONFIG.devTelegram = tgEl.value.trim();
+        const phEl = document.getElementById('cfg-dev-phone');
+        if (phEl) CONFIG.devPhone = phEl.value.trim();
+        const emEl = document.getElementById('cfg-dev-email');
+        if (emEl) CONFIG.devEmail = emEl.value.trim();
+
+        if (CONFIG.targetMode === 'single') {
+          const selectedRadio = document.querySelector('input[name="single-target-choice"]:checked');
+          if (selectedRadio) CONFIG.singleTargetId = selectedRadio.value;
+        }
+
+        saveConfig();
+        hasUnsavedChanges = false;
+        document.getElementById('display-app-title').innerText = CONFIG.appTitle;
+
+        if (saveBtn) {
+          saveBtn.innerText = '✅ சேமிக்கப்பட்டது!';
+          setTimeout(function() {
+            saveBtn.innerText = '💾 அமைப்புகளைச் சேமி (Save Settings)';
+          }, 1500);
+        }
+        showToast("✅ அனைத்து அமைப்புகளும் வெற்றிகரமாகச் சேமிக்கப்பட்டன!");
+        evaluateDrmStatus();
+      } catch (err) {
+        console.error("saveConfigurationFromAdmin error:", err);
+        showToast("சேமிப்பில் பிழை ஏற்பட்டது!");
+      }
+    }
+
+    /* 13. MASTER KEYGEN */
+    function switchKeygenTab(tab) {
+      if (navigator.vibrate) navigator.vibrate(15);
+      document.getElementById('btn-kg-dev').className = tab === 'dev' ? 'keygen-tab-btn active' : 'keygen-tab-btn';
+      document.getElementById('btn-kg-ext').className = tab === 'ext' ? 'keygen-tab-btn active' : 'keygen-tab-btn';
+      document.getElementById('kg-tab-dev').style.display = tab === 'dev' ? 'block' : 'none';
+      document.getElementById('kg-tab-ext').style.display = tab === 'ext' ? 'block' : 'none';
+      document.getElementById('kg-result-display').style.display = 'none';
+    }
+
+    function checkCustomKeygenDays() {
+      const val = document.getElementById('kg-validity-duration').value;
+      document.getElementById('kg-custom-days').style.display = val === 'custom' ? 'block' : 'none';
+    }
+
+    function generateDeviceLicenseKey() {
+      if (navigator.vibrate) navigator.vibrate(30);
+      const reqInput = document.getElementById('kg-client-req').value.trim();
+      if (!reqInput.startsWith('REQ-') || reqInput.length < 8) {
+        showToast("சரியான Device Request Code-ஐ உள்ளிடவும்!");
+        return;
+      }
+
+      let val = document.getElementById('kg-validity-duration').value;
+      let days = 15;
+      if (val === 'custom') {
+        days = parseInt(document.getElementById('kg-custom-days').value) || 15;
+      } else if (val === '-1') {
+        days = 36500;
+      } else {
+        days = parseInt(val);
+      }
+
+      const expiryTs = days >= 36500 ? 9999999999999 : (Date.now() + (days * 86400000));
+      const payload = reqInput + ":" + expiryTs + ":" + days;
+      const sig = simpleSha256(payload + ":" + CONFIG.cryptoSecret).substring(0, 8).toUpperCase();
+      const b64 = btoa(payload).replace(/=/g, '');
+      const key = "ACT-" + b64 + "-" + sig;
+
+      document.getElementById('kg-key-text').innerText = key;
+      document.getElementById('kg-result-label').innerText = "உருவாக்கப்பட்ட விசை (" + (days >= 36500 ? 'Lifetime' : days + ' Days') + "):";
+      document.getElementById('kg-result-display').style.display = 'block';
+
+      const waMsg = encodeURIComponent("வணக்கம், உங்கள் DRM ஆப் ஆக்டிவேஷன் கீ: " + key);
+      document.getElementById('kg-wa-share-btn').href = "https://wa.me/?text=" + waMsg;
+      showToast("ஆக்டிவேஷன் கீ உருவாக்கப்பட்டது!");
+    }
+
+    function generateExtensionPasscode() {
+      if (navigator.vibrate) navigator.vibrate(30);
+      const days = parseInt(document.getElementById('kg-ext-days').value) || 15;
+      const payload = "EXT:" + days + ":" + Date.now();
+      const sig = simpleSha256(payload + ":" + CONFIG.cryptoSecret).substring(0, 8).toUpperCase();
+      const b64 = btoa(payload).replace(/=/g, '').substring(0, 12).toUpperCase();
+      const key = "EXT-" + days + "D-" + b64 + "-" + sig;
+
+      document.getElementById('kg-key-text').innerText = key;
+      document.getElementById('kg-result-label').innerText = "நீட்டிப்பு விசை (+" + days + " Days Extension):";
+      document.getElementById('kg-result-display').style.display = 'block';
+
+      const waMsg = encodeURIComponent("வணக்கம், உங்கள் DRM ஆப் " + days + " நாட்கள் நீட்டிப்பு விசை: " + key);
+      document.getElementById('kg-wa-share-btn').href = "https://wa.me/?text=" + waMsg;
+      showToast("நீட்டிப்பு விசை உருவாக்கப்பட்டது!");
+    }
+
+    function copyGeneratedKeyToClipboard() {
+      const key = document.getElementById('kg-key-text').innerText;
+      navigator.clipboard.writeText(key).then(function() {
+        showToast("விசை நகலெடுக்கப்பட்டது (Copied)!");
+      });
+    }
+
+    /* 14. TAB 5: STEP-BY-STEP ANIMATED BUILD PROGRESS ENGINE WITH PERCENTAGE */
+    function renderExportSummaryPreview() {
+      const preview = document.getElementById('export-summary-preview');
+      if (!preview) return;
+
+      let targetDesc = "எதுவும் தேர்ந்தெடுக்கப்படவில்லை";
+      if (CONFIG.targetMode === 'single') {
+        const p = savedPages.find(function(i) { return i.id === CONFIG.singleTargetId; });
+        const l = savedLinks.find(function(i) { return i.id === CONFIG.singleTargetId; });
+        if (p) targetDesc = "நேரடி HTML பக்கம்: " + p.title;
+        else if (l) targetDesc = "நேரடி வெப் லிங்க்: " + l.title;
+        else targetDesc = "நேரடித் திறப்பு (முதல் உருப்படி)";
+      } else {
+        const count = (CONFIG.enabledTargetIds || []).length;
+        targetDesc = "பட்டியல் மெனு (" + count + " பட்டன்கள் தேர்வு செய்யப்பட்டுள்ளன)";
+      }
+
+      const licDesc = CONFIG.licensingMode === 'device_locked' ? 
+        'Device-Locked (1 Key = 1 Device)' : 
+        `Password-Only (${CONFIG.passwordDays} Days)`;
+
+      preview.innerHTML = `
+        <div class="summary-preview-row">
+          <span class="summary-label">📱 செயலியின் பெயர்:</span>
+          <span class="summary-val">${escapeHtml(CONFIG.appTitle)}</span>
+        </div>
+        <div class="summary-preview-row">
+          <span class="summary-label">🔑 கிளையண்ட் PIN:</span>
+          <span class="summary-val">${escapeHtml(CONFIG.userPin)}</span>
+        </div>
+        <div class="summary-preview-row">
+          <span class="summary-label">🎯 திறக்கும் முறை:</span>
+          <span class="summary-val" style="color:#60a5fa;">${escapeHtml(targetDesc)}</span>
+        </div>
+        <div class="summary-preview-row">
+          <span class="summary-label">🛡️ உரிம முறை:</span>
+          <span class="summary-val" style="color:#34d399;">${licDesc}</span>
+        </div>
+        <div class="summary-preview-row">
+          <span class="summary-label">⏳ எக்ஸ்பைரி:</span>
+          <span class="summary-val" style="color:#f59e0b;">${(CONFIG.expirationDate || 'N/A').replace('T', ' ')}</span>
+        </div>
+        <div class="summary-preview-row">
+          <span class="summary-label">👨‍💻 டெவலப்பர்:</span>
+          <span class="summary-val">${escapeHtml(CONFIG.devName)} (${CONFIG.devWhatsapp})</span>
+        </div>
+      `;
+    }
+
+    function executeSelectedExport() {
+      const radios = document.getElementsByName('export-mode-choice');
+      let isDev = false;
+      for (let i = 0; i < radios.length; i++) {
+        if (radios[i].checked && radios[i].value === 'dev') {
+          isDev = true;
+          break;
+        }
+      }
+      exportAppPackage(isDev);
+    }
+
+    async function exportAppPackage(includeAdmin) {
+      if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
+
+      // 1. Open Progress Modal
+      const modal = document.getElementById('export-progress-modal');
+      const percentEl = document.getElementById('export-progress-percent');
+      const barFill = document.getElementById('export-progress-bar-fill');
+      const logBox = document.getElementById('export-step-log');
+      const finishedActions = document.getElementById('export-finished-actions');
+      const modalTitle = document.getElementById('export-modal-title');
+      const modalSubtitle = document.getElementById('export-modal-subtitle');
+
+      modal.classList.add('active');
+      percentEl.innerText = "0%";
+      barFill.style.width = "0%";
+      logBox.innerHTML = "";
+      finishedActions.style.display = "none";
+      modalTitle.innerText = includeAdmin ? "Dev Build தொகுக்கப்படுகிறது..." : "Client Build தொகுக்கப்படுகிறது...";
+      modalSubtitle.innerText = "பாதுகாப்புக் குறியீடுகள் மற்றும் கிரிப்டோ செயலாக்கம்...";
+
+      const steps = [
+        { pct: 15, text: "🔹 [படி 1/5] அமைப்புகள் மற்றும் பாதுகாப்பு விதிகள் சரிபார்க்கப்படுகிறது..." },
+        { pct: 40, text: "🔹 [படி 2/5] உள்ளடக்கங்கள் கிரிப்டோ சைபர் மூலம் என்க்ரிப்ட் செய்யப்படுகிறது..." },
+        { pct: 70, text: includeAdmin ? "🔹 [படி 3/5] Dev Build அட்மின் பேனல் சீல் செய்யப்படுகிறது..." : "🔹 [படி 3/5] Client Build-லிருந்து அட்மின் குறியீடுகள் நீக்கப்படுகின்றன..." },
+        { pct: 90, text: "🔹 [படி 4/5] ஒருமைப்பாடு சரிபார்த்தல் மற்றும் செக்சம் கணக்கிடப்படுகிறது..." },
+        { pct: 100, text: "✅ [படி 5/5] தொகுத்தல் முடிந்தது! கோப்பு பதிவிறக்கம் செய்யப்படுகிறது..." }
+      ];
+
+      function sleep(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
+
+      for (let i = 0; i < steps.length; i++) {
+        const s = steps[i];
+        percentEl.innerText = s.pct + "%";
+        barFill.style.width = s.pct + "%";
+        const line = document.createElement('div');
+        line.className = "step-log-item active";
+        line.innerText = s.text;
+        logBox.appendChild(line);
+        logBox.scrollTop = logBox.scrollHeight;
+        if (navigator.vibrate) navigator.vibrate(20);
+        await sleep(350);
+      }
+
+      // 2. Perform Real Build
+      saveConfigurationFromAdmin();
+
+      const rawPayload = JSON.stringify({ pages: savedPages, links: savedLinks });
+      const encryptedBlob = encryptString(rawPayload, CONFIG.cryptoSecret);
+
+      let exportConfig = Object.assign({}, CONFIG);
+      exportConfig.encryptedPayload = encryptedBlob;
+      exportConfig.hasAdmin = includeAdmin;
+      exportConfig.isMasterDevSuite = includeAdmin;
+
+      let fullHtml = ORIGINAL_HTML;
+
+      // PROPER BOUNDARIES: Strip Admin Modal and Vault View from Client Builds!
+      if (!includeAdmin) {
+        const salt = Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+        exportConfig.userPinSalt = salt;
+        exportConfig.userPinHash = sha256(CONFIG.userPin + salt);
+        delete exportConfig.userPin; // ZERO PLAINTEXT PIN IN CLIENT BUILDS!
+        exportConfig.adminPassword = "LOCKED_DISABLED";
+        exportConfig.adminPasswordHash = "LOCKED_DISABLED";
+        exportConfig.adminCode = "LOCKED_DISABLED";
+
+        // 1. Strip Admin Modal
+        const modalStart = fullHtml.indexOf('<!-- DEVELOPER ADMIN CONFIGURATION MODAL');
+        const modalEnd = fullHtml.indexOf('<!-- JAVASCRIPT LOGIC ENGINE -->');
+        if (modalStart !== -1 && modalEnd !== -1) {
+          fullHtml = fullHtml.substring(0, modalStart) + fullHtml.substring(modalEnd);
+        }
+
+        // 2. Strip UNLOCKED MULTI-TAB PRIVATE VAULT VIEW (Client never sees vault tabs or buttons!)
+        const vaultStart = fullHtml.indexOf('<!-- UNLOCKED MULTI-TAB PRIVATE VAULT VIEW -->');
+        const vaultEnd = fullHtml.indexOf('<!-- CLEAN CLIENT MENU HUB');
+        if (vaultStart !== -1 && vaultEnd !== -1) {
+          fullHtml = fullHtml.substring(0, vaultStart) + fullHtml.substring(vaultEnd);
+        }
+      }
+
+      const configJson = JSON.stringify(exportConfig, null, 2);
+      const configPattern = /const DEFAULT_CONFIG = \{[\s\S]*?\};/;
+      fullHtml = fullHtml.replace(configPattern, function() { return "const DEFAULT_CONFIG = " + configJson + ";"; });
+
+      lastExportedHtml = fullHtml;
+      lastExportedFilename = getSanitizedExportFilename();
+
+      let blobUrl = "";
+      try {
+        const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
+        blobUrl = URL.createObjectURL(blob);
+      } catch (e) {
+        console.error("Blob creation error:", e);
+      }
+
+      const dataUri = 'data:text/html;charset=utf-8,' + encodeURIComponent(fullHtml);
+
+      // Setup Direct Download inside Progress Modal
+      const modalDlBtn = document.getElementById('btn-modal-direct-download');
+      if (modalDlBtn && blobUrl) {
+        modalDlBtn.href = blobUrl;
+        modalDlBtn.download = lastExportedFilename;
+        modalDlBtn.innerHTML = "<span>📥</span> உங்கள் கோப்பைப் பதிவிறக்குக (" + escapeHtml(lastExportedFilename) + ")";
+      }
+
+      // Also setup fallback Tab 5 buttons
+      const blobBtn = document.getElementById('real-download-blob-btn');
+      if (blobBtn && blobUrl) {
+        blobBtn.href = blobUrl;
+        blobBtn.download = lastExportedFilename;
+      }
+      const dataBtn = document.getElementById('real-download-datauri-btn');
+      if (dataBtn) {
+        dataBtn.href = dataUri;
+        dataBtn.download = lastExportedFilename;
+      }
+
+      // Reveal Finished Actions in Progress Modal
+      modalTitle.innerText = "🎉 தொகுத்தல் 100% முடிந்தது!";
+      modalSubtitle.innerText = lastExportedFilename;
+      finishedActions.style.display = "block";
+      if (navigator.vibrate) navigator.vibrate([60, 40, 80]);
+
+      // Trigger auto-download
+      if (modalDlBtn && blobUrl) {
+        try {
+          modalDlBtn.click();
+        } catch (e) {
+          console.warn("Auto-download prevented:", e);
+        }
+      }
+      showToast("✅ கோப்பு வெற்றிகரமாக உருவாக்கப்பட்டது!");
+    }
+
+    function closeExportProgressModal() {
+      const modal = document.getElementById('export-progress-modal');
+      if (modal) modal.classList.remove('active');
+    }
+
+    function copyExportedCodeToClipboard() {
+      if (!lastExportedHtml) {
+        showToast("முதலில் எக்ஸ்போர்ட் ஃபைலை உருவாக்கவும்!");
+        return;
+      }
+      navigator.clipboard.writeText(lastExportedHtml).then(function() {
+        showToast("முழு HTML குறியீடு நகலெடுக்கப்பட்டது (Code Copied)!");
+      }).catch(function() {
+        showToast("காப்பி செய்ய முடியவில்லை!");
+      });
+    }
+
+    function openExportInNewTab() {
+      if (!lastExportedHtml) {
+        showToast("முதலில் எக்ஸ்போர்ட் ஃபைலை உருவாக்கவும்!");
+        return;
+      }
+      const blob = new Blob([lastExportedHtml], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    }
+
+    /* 15. STORAGE & VAULT UTILITIES */
+    function loadStoredConfig() {
+      const stored = safeStorage.getItem('_drm_app_cfg');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          CONFIG = Object.assign({}, DEFAULT_CONFIG, parsed);
+        } catch (e) {
+          CONFIG = Object.assign({}, DEFAULT_CONFIG);
+        }
+      }
+      document.getElementById('display-app-title').innerText = CONFIG.appTitle;
+    }
+
+    function saveConfig() {
+      safeStorage.setItem('_drm_app_cfg', JSON.stringify(CONFIG));
+    }
+
+    function initClientIdentity() {
+      let cid = safeStorage.getItem('_drm_client_id');
+      if (!cid) {
+        cid = "DRM-" + Math.floor(1000 + Math.random() * 9000);
+        safeStorage.setItem('_drm_client_id', cid);
+      }
+      document.getElementById('footer-client-id').innerText = "CLIENT: " + cid;
+    }
+
+    
+    /* ============================================================
+       V1.2.1 CRYPTOGRAPHIC HARMONY: WEB CRYPTO API (AES-256-GCM)
+       ============================================================ */
+    async function deriveAesKey(passphrase, saltBytes) {
+      if (!window.crypto || !window.crypto.subtle) return null;
+      const enc = new TextEncoder();
+      const keyMaterial = await window.crypto.subtle.importKey(
+        "raw",
+        enc.encode(passphrase),
+        { name: "PBKDF2" },
+        false,
+        ["deriveKey"]
+      );
+      return await window.crypto.subtle.deriveKey(
+        {
+          name: "PBKDF2",
+          salt: saltBytes,
+          iterations: 100000,
+          hash: "SHA-256"
+        },
+        keyMaterial,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["encrypt", "decrypt"]
+      );
+    }
+
+    async function encryptPayloadAesGcm(plainText, passphrase) {
+      try {
+        if (window.crypto && window.crypto.subtle) {
+          const enc = new TextEncoder();
+          const salt = window.crypto.getRandomValues(new Uint8Array(16));
+          const iv = window.crypto.getRandomValues(new Uint8Array(12));
+          const key = await deriveAesKey(passphrase, salt);
+          const encrypted = await window.crypto.subtle.encrypt(
+            { name: "AES-GCM", iv: iv },
+            key,
+            enc.encode(plainText)
+          );
+          const combined = new Uint8Array(salt.length + iv.length + encrypted.byteLength);
+          combined.set(salt, 0);
+          combined.set(iv, 16);
+          combined.set(new Uint8Array(encrypted), 28);
+          let binary = '';
+          for (let i = 0; i < combined.length; i++) binary += String.fromCharCode(combined[i]);
+          return "aesgcm:" + btoa(binary);
+        }
+      } catch (e) {
+        console.warn("WebCrypto encryption fallback:", e);
+      }
+      return legacyEncryptString(plainText, passphrase);
+    }
+
+    async function decryptPayloadAesGcm(cipherText, passphrase) {
+      if (!cipherText) return null;
+      if (cipherText.startsWith("aesgcm:") && window.crypto && window.crypto.subtle) {
+        try {
+          const binary = atob(cipherText.substring(7));
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+          const salt = bytes.slice(0, 16);
+          const iv = bytes.slice(16, 28);
+          const data = bytes.slice(28);
+          const key = await deriveAesKey(passphrase, salt);
+          const decrypted = await window.crypto.subtle.decrypt(
+            { name: "AES-GCM", iv: iv },
+            key,
+            data
+          );
+          return new TextDecoder().decode(decrypted);
+        } catch (e) {
+          console.warn("AES-GCM decryption fallback:", e);
+        }
+      }
+      return legacyDecryptString(cipherText, passphrase);
+    }
+
+    function legacyEncryptString(str, key) {
+      const bytes = unescape(encodeURIComponent(str));
+      let out = "";
+      for (let i = 0; i < bytes.length; i++) {
+        out += String.fromCharCode(bytes.charCodeAt(i) ^ (key.charCodeAt(i % key.length) & 255));
+      }
+      return "u8:" + btoa(out);
+    }
+
+    function legacyDecryptString(b64, key) {
+      try {
+        const isU8 = b64.indexOf("u8:") === 0;
+        const str = atob(isU8 ? b64.substring(3) : b64);
+        let out = "";
+        for (let i = 0; i < str.length; i++) {
+          out += String.fromCharCode(str.charCodeAt(i) ^ (isU8 ? (key.charCodeAt(i % key.length) & 255) : key.charCodeAt(i % key.length)));
+        }
+        return isU8 ? decodeURIComponent(escape(out)) : out;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function encryptString(str, key) {
+      return legacyEncryptString(str, key);
+    }
+    function decryptString(b64, key) {
+      return legacyDecryptString(b64, key);
+    }
+function loadVaultData(enteredPin) {
+      if (CONFIG.encryptedPayload) {
+        let decrypted = null;
+
+        // Tier 1: Universal portable decryption using CONFIG.cryptoSecret
+        decrypted = decryptString(CONFIG.encryptedPayload, CONFIG.cryptoSecret);
+
+        // Tier 2: Decryption with entered PIN (for PIN-bound payloads)
+        if (!decrypted && enteredPin) {
+          decrypted = decryptString(CONFIG.encryptedPayload, CONFIG.cryptoSecret + enteredPin);
+        }
+
+        // Tier 3: Decryption with CONFIG.userPin (if present)
+        if (!decrypted && CONFIG.userPin) {
+          decrypted = decryptString(CONFIG.encryptedPayload, CONFIG.cryptoSecret + CONFIG.userPin);
+        }
+
+        if (decrypted) {
+          try {
+            const data = JSON.parse(decrypted);
+            if (data.pages && Array.isArray(data.pages)) savedPages = data.pages;
+            if (data.links && Array.isArray(data.links)) savedLinks = data.links;
+            return true;
+          } catch (e) {
+            console.warn("Vault payload JSON parse failed:", e);
+          }
+        }
+      }
+
+      // Fallback: Local safeStorage for Master Dev origin
+      try {
+        const p = safeStorage.getItem('_drm_vault_pages');
+        if (p) savedPages = JSON.parse(p);
+      } catch (e) { savedPages = []; }
+      try {
+        const l = safeStorage.getItem('_drm_vault_links');
+        if (l) savedLinks = JSON.parse(l);
+      } catch (e) { savedLinks = []; }
+      return savedPages.length > 0 || savedLinks.length > 0;
+    }
+
+    function saveVaultData() {
+      safeStorage.setItem('_drm_vault_pages', JSON.stringify(savedPages));
+      safeStorage.setItem('_drm_vault_links', JSON.stringify(savedLinks));
+    }
+
+    function renderPagesList() {
+      const container = document.getElementById('pages-grid-container');
+      if (!container) return;
+      container.innerHTML = "";
+      if (savedPages.length === 0) {
+        container.innerHTML = '<div style="grid-column: 1/-1; text-align:center; color:#64748b; font-size:0.85rem; padding: 20px;">கோப்புகள் எதுவும் இல்லை. + பட்டனைத் தட்டவும்.</div>';
+        return;
+      }
+      savedPages.forEach(function(item) {
+        const card = document.createElement('div');
+        card.className = "page-card";
+        card.innerHTML = `
+          <div class="page-card-title">${escapeHtml(item.title)}</div>
+          <div class="page-card-meta">HTML Page &bull; ${item.size || 'Local'}</div>
+          <div class="page-card-actions">
+            <button class="action-btn-small" onclick="openVaultHtmlPage('${item.id}')">திற (Open)</button>
+            <button class="action-btn-small ${item.isAutoOpen ? 'auto-active' : ''}" onclick="toggleAutoOpen('page', '${item.id}')">
+              ${item.isAutoOpen ? '★ Target' : '☆ Target'}
+            </button>
+            <button class="action-btn-small delete" onclick="deleteVaultItem('page', '${item.id}')">✕</button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function renderLinksList() {
+      const container = document.getElementById('links-grid-container');
+      if (!container) return;
+      container.innerHTML = "";
+      if (savedLinks.length === 0) {
+        container.innerHTML = '<div style="grid-column: 1/-1; text-align:center; color:#64748b; font-size:0.85rem; padding: 20px;">இணைப்புகள் எதுவும் இல்லை. + பட்டனைத் தட்டவும்.</div>';
+        return;
+      }
+      savedLinks.forEach(function(item) {
+        const card = document.createElement('div');
+        card.className = "page-card";
+        card.innerHTML = `
+          <div class="page-card-title">${escapeHtml(item.title)}</div>
+          <div class="page-card-meta" style="color:#60a5fa;">🔒 Secured Web Target</div>
+          <div class="page-card-actions">
+            <button class="action-btn-small" onclick="openVaultWebLink('${item.id}')">திற (Open)</button>
+            <button class="action-btn-small ${item.isAutoOpen ? 'auto-active' : ''}" onclick="toggleAutoOpen('link', '${item.id}')">
+              ${item.isAutoOpen ? '★ Target' : '☆ Target'}
+            </button>
+            <button class="action-btn-small delete" onclick="deleteVaultItem('link', '${item.id}')">✕</button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function handleLocalFileUpload(event) {
+      const file = event.target.files && event.target.files[0];
+      if (file) processUploadedHtmlFile(file);
+      event.target.value = "";
+    }
+
+    function handleAdminFileUpload(event) {
+      const file = event.target.files && event.target.files[0];
+      if (file) processUploadedHtmlFile(file);
+      event.target.value = "";
+    }
+
+    function toggleAutoOpen(type, id) {
+      CONFIG.singleTargetId = id;
+      savedPages.forEach(function(p) { p.isAutoOpen = (p.id === id); });
+      savedLinks.forEach(function(l) { l.isAutoOpen = (l.id === id); });
+      saveVaultData();
+      saveConfig();
+      renderPagesList();
+      renderLinksList();
+      showToast("முதன்மை இலக்காக அமைக்கப்பட்டது!");
+    }
+
+    function deleteVaultItem(type, id) {
+      if (!confirm("இதை நிச்சயமாக நீக்க விரும்புகிறீர்களா?")) return;
+      if (type === 'page') {
+        savedPages = savedPages.filter(function(p) { return p.id !== id; });
+      } else {
+        savedLinks = savedLinks.filter(function(l) { return l.id !== id; });
+      }
+      if (CONFIG.singleTargetId === id) CONFIG.singleTargetId = "";
+      if (CONFIG.enabledTargetIds) CONFIG.enabledTargetIds = CONFIG.enabledTargetIds.filter(function(i) { return i !== id; });
+
+      saveVaultData();
+      saveConfig();
+      renderPagesList();
+      renderLinksList();
+      renderAdminVaultManager();
+      showToast("நீக்கப்பட்டது!");
+    }
+
+    function initSecretNote() {
+      const noteInput = document.getElementById('secret-note-input');
+      if (!noteInput) return;
+      noteInput.value = safeStorage.getItem('_drm_secret_note') || "";
+    }
+
+    function clearSecretNote() {
+      if (!confirm("குறிப்பை அழிக்கவா?")) return;
+      safeStorage.removeItem('_drm_secret_note');
+      const noteInput = document.getElementById('secret-note-input');
+      if (noteInput) noteInput.value = "";
+      const admNote = document.getElementById('admin-secret-note');
+      if (admNote) admNote.value = "";
+      showToast("குறிப்பு அழிக்கப்பட்டது!");
+    }
+
+    function switchVaultTab(tab) {
+      const bp = document.getElementById('btn-tab-pages');
+      const bl = document.getElementById('btn-tab-links');
+      const bn = document.getElementById('btn-tab-notes');
+      if (bp) bp.className = tab === 'pages' ? 'vault-tab-btn active' : 'vault-tab-btn';
+      if (bl) bl.className = tab === 'links' ? 'vault-tab-btn active' : 'vault-tab-btn';
+      if (bn) bn.className = tab === 'notes' ? 'vault-tab-btn active' : 'vault-tab-btn';
+
+      const tp = document.getElementById('tab-pages');
+      const tl = document.getElementById('tab-links');
+      const tn = document.getElementById('tab-notes');
+      if (tp) tp.className = tab === 'pages' ? 'tab-content active' : 'tab-content';
+      if (tl) tl.className = tab === 'links' ? 'tab-content active' : 'tab-content';
+      if (tn) tn.className = tab === 'notes' ? 'tab-content active' : 'tab-content';
+    }
+
+    function clearAlert() {
+      const box = document.getElementById('alert-box');
+      if (box) { box.innerText = ""; box.className = "alert-msg"; }
+    }
+
+    function showAlert(msg, isError) {
+      const box = document.getElementById('alert-box');
+      if (box) {
+        box.innerText = msg;
+        box.className = isError ? "alert-msg error" : "alert-msg success";
+      }
+    }
+
+    function triggerExpirationLockout() {
+      document.getElementById('portal-dev-name').innerText = CONFIG.devName;
+      const cid = safeStorage.getItem('_drm_client_id') || 'DRM-CLIENT';
+      const msg = encodeURIComponent("வணக்கம் " + CONFIG.devName + ", எனது DRM ஆப் உரிமம் காலாவதியாகிவிட்டது. Client ID: " + cid + " Device: " + currentDeviceId);
+
+      document.getElementById('portal-btn-whatsapp').href = "https://wa.me/" + CONFIG.devWhatsapp + "?text=" + msg;
+      document.getElementById('portal-btn-telegram').href = "https://t.me/" + CONFIG.devTelegram;
+      document.getElementById('portal-btn-phone').href = "tel:" + CONFIG.devPhone;
+      document.getElementById('portal-btn-email').href = "mailto:" + CONFIG.devEmail + "?subject=" + encodeURIComponent("DRM Renewal - " + cid) + "&body=" + msg;
+
+      document.getElementById('overlay-contact').classList.add('active');
+    }
+
+    function handleApplyContactKey() {
+      const input = document.getElementById('contact-quick-key').value.trim();
+      const alertElem = document.getElementById('contact-alert');
+
+      if (input.startsWith('EXT-')) {
+        try {
+          const parts = input.split('-');
+          const days = parseInt(parts[1]) || 15;
+          const currentExtra = parseInt(safeStorage.getItem('_drm_extra_days') || '0');
+          safeStorage.setItem('_drm_extra_days', (currentExtra + days).toString());
+
+          const newExp = new Date(Date.now() + (days * 86400000));
+          CONFIG.expirationDate = newExp.toISOString().slice(0, 19);
+          saveConfig();
+
+          alertElem.className = "alert-msg success";
+          alertElem.innerText = "உரிமம் " + days + " நாட்களுக்கு நீட்டிக்கப்பட்டது!";
+          setTimeout(function() {
+            document.getElementById('overlay-contact').classList.remove('active');
+            evaluateDrmStatus();
+          }, 1200);
+          return;
+        } catch (e) {}
+      }
+
+      if (input.startsWith('DRM-') && input.length >= 10) {
+        const newExp = new Date(Date.now() + (30 * 24 * 60 * 60 * 1000));
+        CONFIG.expirationDate = newExp.toISOString().slice(0, 19);
+        saveConfig();
+        alertElem.className = "alert-msg success";
+        alertElem.innerText = "உரிமம் 30 நாட்களுக்கு நீட்டிக்கப்பட்டது!";
+        setTimeout(function() {
+          document.getElementById('overlay-contact').classList.remove('active');
+          evaluateDrmStatus();
+        }, 1200);
+      } else {
+        alertElem.className = "alert-msg error";
+        alertElem.innerText = "தவறான உரிம விசை (Invalid Key)";
+      }
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast-popup');
+      if (!toast) return;
+      toast.innerText = msg;
+      toast.classList.add('show');
+      setTimeout(function() { toast.classList.remove('show'); }, 2500);
+    }
+
+    function escapeHtml(text) {
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+      return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
+    }
+  </script></div></body></html>
