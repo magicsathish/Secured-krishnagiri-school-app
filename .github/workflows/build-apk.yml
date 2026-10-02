@@ -18,8 +18,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
+          node-version: '20'
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -35,7 +35,7 @@ jobs:
       - name: Initialize Capacitor Android app
         run: |
           npx cap init "Digital India" "com.digitalindia.krishnagiri" --web-dir . --npm-client npm --android-ts || true
-          npx cap add android
+          npx cap add android || true
 
       - name: Sync web assets to Android project
         run: npx cap sync android
@@ -49,4 +49,4 @@ jobs:
         with:
           name: digital-india-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
-          retention-days: 30
+          if-no-files-found: error
